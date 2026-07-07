@@ -1,3 +1,23 @@
+// --- Dark-Mode-Toggle --------------------------------------------------------
+
+function toggleTheme() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const next = isDark ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  updateThemeButton();
+}
+
+function updateThemeButton() {
+  const btn = document.getElementById('theme-toggle');
+  if (!btn) return;
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  btn.textContent = isDark ? '☀' : '🌙';
+  btn.title = isDark ? 'Heller Modus' : 'Dunkler Modus';
+}
+
+document.addEventListener('DOMContentLoaded', updateThemeButton);
+
 // Gemeinsame Hilfsfunktionen: Vollbild-Lightbox fuer Bilder + Bild-Upload
 // (Datei-Auswahl oder Clipboard-Paste) fuer den Karteneditor.
 
