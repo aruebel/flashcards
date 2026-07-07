@@ -14,7 +14,16 @@ def create_app(data_dir: Optional[Path] = None) -> Flask:
     app.config["DATA_DIR"] = Path(data_dir or os.environ.get("DATA_DIR", "./data")).resolve()
     app.config["DATA_DIR"].mkdir(parents=True, exist_ok=True)
     app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024  # 20 MB Upload-Limit
-    app.secret_key = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
+
+    secret_key_path = app.config["DATA_DIR"] / ".secret_key"
+    if env_key := os.environ.get("SECRET_KEY"):
+        app.secret_key = env_key
+    elif secret_key_path.exists():
+        app.secret_key = secret_key_path.read_text().strip()
+    else:
+        key = secrets.token_hex(32)
+        secret_key_path.write_text(key)
+        app.secret_key = key
 
     from .routes.topics import topics_bp
     from .routes.cards import cards_bp
