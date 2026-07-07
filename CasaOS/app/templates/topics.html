@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Themen verwalten{% endblock %}
+{% block content %}
+
+<h1>Themen verwalten</h1>
+
+<form method="post" action="{{ url_for('topics.add_topic') }}" class="inline-form-row">
+  <input type="text" name="name" placeholder="Neues Thema" required>
+  <button type="submit">Anlegen</button>
+</form>
+
+<table class="card-table">
+  <thead><tr><th>Name</th><th></th></tr></thead>
+  <tbody>
+    {% for topic in topics %}
+    <tr>
+      <td>
+        <form method="post" action="{{ url_for('topics.rename_topic', topic_id=topic.id) }}" class="inline-form-row">
+          <input type="text" name="name" value="{{ topic.name }}" required>
+          <button type="submit">Umbenennen</button>
+        </form>
+      </td>
+      <td class="row-actions">
+        <form method="post" action="{{ url_for('topics.delete_topic', topic_id=topic.id) }}"
+              onsubmit="return confirm('Thema \'{{ topic.name }}\' und alle zugehoerigen Karten wirklich loeschen?');">
+          <button type="submit" class="link-button danger">Loeschen</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="2" class="empty">Noch keine Themen vorhanden.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% endblock %}

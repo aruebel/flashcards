@@ -1,0 +1,37 @@
+name: flashcards
+services:
+  flashcards:
+    build: .
+    # Alternativ, falls du das Image in eine eigene Registry (z.B. Docker Hub)
+    # gepusht hast, kannst du "build: ." durch folgende Zeile ersetzen:
+    # image: <dein-dockerhub-name>/flashcards:latest
+    container_name: flashcards
+    restart: unless-stopped
+    ports:
+      - "8099:5000"
+    volumes:
+      - /DATA/AppData/flashcards:/data
+    environment:
+      - DATA_DIR=/data
+    x-casaos:
+      architectures:
+        - amd64
+        - arm64
+      main: flashcards
+      title:
+        en_us: Flashcards
+        de_de: Karteikarten Lernsystem
+      tagline:
+        en_us: Learn with flashcards and spaced repetition
+        de_de: Karteikarten lernen mit Spaced Repetition
+      description:
+        en_us: Create topic-based flashcards with text and images, quiz yourself
+          with a 4-level confidence rating and spaced repetition, and back up
+          your progress.
+        de_de: Karteikarten mit Text und Bildern nach Themen anlegen, per
+          4-stufiger Bewertung und Spaced Repetition abfragen, Fortschritt
+          sichern.
+      icon: ""
+      category: Utilities
+      port_map: "8099"
+      index: /

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}{% if card %}Karte bearbeiten{% else %}Neue Karte{% endif %}{% endblock %}
+{% block content %}
+
+<h1>{% if card %}Karte bearbeiten{% else %}Neue Karte{% endif %}</h1>
+
+<form method="post"
+      action="{% if card %}{{ url_for('cards.update_card', card_id=card.id) }}{% else %}{{ url_for('cards.create_card') }}{% endif %}">
+
+  <div class="field-row">
+    <label for="topic_id">Thema:</label>
+    <select name="topic_id" id="topic_id" required>
+      {% for topic in topics %}
+        <option value="{{ topic.id }}" {% if topic.id == selected_topic_id %}selected{% endif %}>{{ topic.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  {% for side, label, text_value, image_path in [
+       ("question", "Frage", card.question_text if card else "", card.question_image_path if card else None),
+       ("answer", "Antwort", card.answer_text if card else "", card.answer_image_path if card else None)
+  ] %}
+  <fieldset class="card-side">
+    <legend>{{ label }}</legend>
+    <textarea id="{{ side }}_text" name="{{ side }}_text" rows="5">{{ text_value }}</textarea>
+
+    <input type="hidden" id="{{ side }}_image_path" name="{{ side }}_image_path" value="{{ image_path or '' }}">
+    <img id="{{ side }}_preview" class="image-preview {% if not image_path %}hidden{% endif %}"
+         src="{{ image_path | media_url or '' }}" alt="{{ label }}-Bild">
+    <p id="{{ side }}_placeholder" class="image-placeholder {% if image_path %}hidden{% endif %}">Kein Bild</p>
+
+    <div class="side-buttons">
+      <label class="button-like">
+        Bild hochladen...
+        <input type="file" id="{{ side }}_image_file" accept="image/*" class="hidden-file-input">
+      </label>
+      <button type="button" onclick="removeSideImage('{{ side }}')">Bild entfernen</button>
+      <span class="hint">Oder: Feld anklicken und Bild mit Strg+V einfuegen (z.&nbsp;B. Screenshot).</span>
+    </div>
+  </fieldset>
+  {% endfor %}
+
+  <div class="form-actions">
+    <button type="submit">Speichern</button>
+    {% if card %}
+      <a class="button-like" href="{{ url_for('cards.index') }}">Abbrechen</a>
+    {% else %}
+      <a class="button-like" href="{{ url_for('cards.index') }}">Fertig</a>
+    {% endif %}
+  </div>
+</form>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  initImageSide("question");
+  initImageSide("answer");
+  {% if just_saved %}
+  document.getElementById("question_text").focus();
+  {% endif %}
+</script>
+{% endblock %}

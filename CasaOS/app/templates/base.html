@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Karteikarten Lernsystem{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="{{ url_for('cards.index') }}">Karteikarten Lernsystem</a>
+    <nav>
+      <a href="{{ url_for('topics.list_topics') }}">Themen verwalten</a>
+      <a href="{{ url_for('cards.new_card_form') }}">Neue Karte</a>
+      <a href="{{ url_for('quiz.setup') }}">Abfrage starten</a>
+      <a href="{{ url_for('quiz.setup', review_mastered='1') }}">Gelernte wiederholen</a>
+      <a href="{{ url_for('backup.export') }}">Exportieren</a>
+      <a href="{{ url_for('backup.import_form') }}">Importieren</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-stack">
+          {% for category, message in messages %}
+            <div class="flash flash-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  <div id="lightbox" class="lightbox hidden" onclick="closeLightbox()">
+    <img id="lightbox-img" src="" alt="Vollbild">
+  </div>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

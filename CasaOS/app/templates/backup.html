@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Backup importieren{% endblock %}
+{% block content %}
+
+<h1>Backup importieren</h1>
+
+<p>Exportieren erzeugt einen Download unter "Exportieren" oben im Menue. Zum
+   Wiederherstellen bzw. Zusammenfuehren hier eine zuvor exportierte
+   <code>.zip</code>-Datei auswaehlen.</p>
+
+<form method="post" action="{{ url_for('backup.import_backup') }}" enctype="multipart/form-data" id="import-form">
+  <div class="field-row">
+    <label for="file">Backup-Datei:</label>
+    <input type="file" name="file" id="file" accept=".zip" required>
+  </div>
+
+  <fieldset>
+    <legend>Import-Modus</legend>
+    <label class="radio-row">
+      <input type="radio" name="mode" value="merge" checked> Zusammenfuehren – neue Themen/Karten
+      hinzufuegen, bereits vorhandene Karten (gleiche Frage+Antwort) werden uebersprungen.
+    </label>
+    <label class="radio-row">
+      <input type="radio" name="mode" value="replace" id="mode-replace"> Ersetzen – alle vorhandenen
+      Themen und Karten werden vorher geloescht und komplett durch den Inhalt des Backups ersetzt.
+    </label>
+  </fieldset>
+
+  <button type="submit">Importieren</button>
+</form>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.getElementById("import-form").addEventListener("submit", (event) => {
+    if (document.getElementById("mode-replace").checked) {
+      const confirmed = confirm(
+        "Alle vorhandenen Themen und Karten werden geloescht und durch den Inhalt des Backups ersetzt. Fortfahren?"
+      );
+      if (!confirmed) event.preventDefault();
+    }
+  });
+</script>
+{% endblock %}

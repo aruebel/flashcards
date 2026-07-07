@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Abfrage beendet{% endblock %}
+{% block content %}
+
+<h1>Abfrage beendet</h1>
+
+<div class="quiz-card">
+  {% if early %}
+    <p>Abfrage vorzeitig beendet. {{ processed }} von {{ total }} Karte(n) abgefragt, der Fortschritt wurde gespeichert.</p>
+  {% else %}
+    <p>Fertig! {{ processed }} Karte(n) abgefragt.</p>
+  {% endif %}
+  <p>Davon neu als "gelernt" markiert: {{ newly_mastered }}.</p>
+  {% if dropped %}
+    <p>Wieder in die normale Abfrage zurueckgeholt (nicht mehr sicher gewusst): {{ dropped }}.</p>
+  {% endif %}
+
+  <a class="button-like" href="{{ url_for('cards.index') }}">Zur Kartenuebersicht</a>
+</div>
+
+{% endblock %}

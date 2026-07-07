@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Karten – Karteikarten Lernsystem{% endblock %}
+{% block content %}
+
+<form method="get" class="filter-row">
+  <label for="topic_id">Filter:</label>
+  <select name="topic_id" id="topic_id" onchange="this.form.submit()">
+    <option value="">Alle Themen</option>
+    {% for topic in topics %}
+      <option value="{{ topic.id }}" {% if topic_filter == topic.id %}selected{% endif %}>{{ topic.name }}</option>
+    {% endfor %}
+  </select>
+</form>
+
+<table class="card-table">
+  <thead>
+    <tr><th>Thema</th><th>Frage</th><th>Status</th><th></th></tr>
+  </thead>
+  <tbody>
+    {% for card in cards %}
+    <tr>
+      <td>{{ card.topic_name }}</td>
+      <td>{{ card.preview }}</td>
+      <td>{{ card.status }}</td>
+      <td class="row-actions">
+        <a href="{{ url_for('cards.edit_card_form', card_id=card.id) }}">Bearbeiten</a>
+        <form method="post" action="{{ url_for('cards.reset_card', card_id=card.id) }}" class="inline-form">
+          <button type="submit" class="link-button">Lernstatus zuruecksetzen</button>
+        </form>
+        <form method="post" action="{{ url_for('cards.delete_card', card_id=card.id) }}" class="inline-form"
+              onsubmit="return confirm('Diese Karte wirklich loeschen?');">
+          <button type="submit" class="link-button danger">Loeschen</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="4" class="empty">Noch keine Karten vorhanden.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% endblock %}

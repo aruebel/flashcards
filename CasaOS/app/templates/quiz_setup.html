@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}{% if review_mastered %}Gelernte Karten wiederholen{% else %}Abfrage starten{% endif %}{% endblock %}
+{% block content %}
+
+<h1>{% if review_mastered %}Gelernte Karten wiederholen{% else %}Abfrage starten{% endif %}</h1>
+
+{% if review_mastered %}
+<p class="hint-box">
+  Fragt gezielt Karten ab, die bereits als "gelernt" gelten und sonst nicht mehr in der
+  normalen Abfrage vorkommen. Karten, die dabei nicht mehr sicher gewusst werden, kommen
+  automatisch wieder in die normale Abfrage zurueck.
+</p>
+{% endif %}
+
+<form method="post" action="{{ url_for('quiz.start') }}">
+  <input type="hidden" name="review_mastered" value="{{ '1' if review_mastered else '0' }}">
+
+  <fieldset>
+    <legend>Themen auswaehlen (keine Auswahl = alle)</legend>
+    {% for topic in topics %}
+      <label class="checkbox-row">
+        <input type="checkbox" name="topic_ids" value="{{ topic.id }}"> {{ topic.name }}
+      </label>
+    {% else %}
+      <p class="empty">Noch keine Themen vorhanden.</p>
+    {% endfor %}
+  </fieldset>
+
+  {% if not review_mastered %}
+  <label class="checkbox-row">
+    <input type="checkbox" name="only_due" checked> Nur faellige Karten abfragen
+  </label>
+  {% endif %}
+
+  <fieldset>
+    <legend>Anzahl Karten</legend>
+    {% for choice in count_choices %}
+      <label class="radio-row">
+        <input type="radio" name="count" value="{{ choice }}" {% if choice == "all" %}checked{% endif %}>
+        {% if choice == "all" %}{{ "Alle gelernten" if review_mastered else "Alle faelligen" }}{% else %}{{ choice }}{% endif %}
+      </label>
+    {% endfor %}
+  </fieldset>
+
+  <button type="submit">{% if review_mastered %}Wiederholung starten{% else %}Abfrage starten{% endif %}</button>
+</form>
+
+{% endblock %}

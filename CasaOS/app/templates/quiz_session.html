@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Abfrage laeuft{% endblock %}
+{% block content %}
+
+<div class="quiz-topbar">
+  <span>Karte {{ position }} von {{ total }}</span>
+  <form method="post" action="{{ url_for('quiz.end_early') }}" onsubmit="return confirm('Abfrage wirklich beenden? Der bisherige Fortschritt bleibt gespeichert.');">
+    <button type="submit" class="danger">Abfrage beenden</button>
+  </form>
+</div>
+
+<div class="quiz-card">
+  <h2>{{ "Antwort" if revealed else "Frage" }}</h2>
+  <p class="quiz-text">{{ card.answer_text if revealed else card.question_text }}</p>
+
+  {% set image_path = card.answer_image_path if revealed else card.question_image_path %}
+  {% if image_path %}
+    <img class="quiz-image" src="{{ image_path | media_url }}" alt="Kartenbild">
+  {% endif %}
+
+  {% if not revealed %}
+    <form method="post" action="{{ url_for('quiz.reveal') }}">
+      <button type="submit">Antwort anzeigen</button>
+    </form>
+  {% else %}
+    <form method="post" action="{{ url_for('quiz.rate') }}" class="rating-row">
+      {% for value, label in ratings.items() %}
+        <button type="submit" name="rating" value="{{ value }}">({{ value }}) {{ label }}</button>
+      {% endfor %}
+    </form>
+  {% endif %}
+</div>
+
+{% endblock %}
