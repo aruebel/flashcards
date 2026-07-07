@@ -60,6 +60,32 @@ def test_due_cards_filters_by_topic(db):
     assert [c.id for c in result] == [card_a.id]
 
 
+def test_mastered_cards_returns_only_mastered(db):
+    topic = db.add_topic("Erdkunde")
+    mastered_card = db.add_card(Card(id=None, topic_id=topic.id, question_text="Hauptstadt?", answer_text="Berlin"))
+    db.add_card(Card(id=None, topic_id=topic.id, question_text="Fluss?", answer_text="Rhein"))
+    state = db.get_review_state(mastered_card.id)
+    state.mastered = True
+    db.save_review_state(state)
+
+    result = db.mastered_cards()
+    assert [c.id for c in result] == [mastered_card.id]
+
+
+def test_mastered_cards_filters_by_topic(db):
+    t1 = db.add_topic("Thema A")
+    t2 = db.add_topic("Thema B")
+    card_a = db.add_card(Card(id=None, topic_id=t1.id, question_text="A?", answer_text="a"))
+    card_b = db.add_card(Card(id=None, topic_id=t2.id, question_text="B?", answer_text="b"))
+    for card in (card_a, card_b):
+        state = db.get_review_state(card.id)
+        state.mastered = True
+        db.save_review_state(state)
+
+    result = db.mastered_cards(topic_ids=[t1.id])
+    assert [c.id for c in result] == [card_a.id]
+
+
 def test_reset_review_state_returns_card_to_box_zero(db):
     topic = db.add_topic("Geschichte")
     card = db.add_card(Card(id=None, topic_id=topic.id, question_text="Wann?", answer_text="1990"))

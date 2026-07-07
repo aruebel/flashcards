@@ -27,10 +27,16 @@ Es oeffnet sich das Hauptfenster. Beim ersten Start ist die Kartenliste leer.
    - **Bild einfuegen (Strg+V)** liest ein Bild direkt aus der Zwischenablage
      (z. B. nach einem Screenshot mit `Win+Shift+S`).
    - **Bild laden...** waehlt eine Bilddatei von der Festplatte.
-3. **Abfrage starten** – Themen auswaehlen (oder keine Auswahl = alle Themen)
-   und optional nur faellige Karten abfragen lassen. Danach wird jede Karte
-   nacheinander angezeigt: erst die Frage, nach Klick auf "Antwort anzeigen"
-   die Antwort, gefolgt von der Bewertung.
+3. **Abfrage starten** – Themen auswaehlen (oder keine Auswahl = alle Themen),
+   optional nur faellige Karten abfragen lassen, und die Anzahl der Karten
+   waehlen (10, 20, 30 oder alle faelligen). Sind weniger Karten faellig als
+   angefragt, wird das vor dem Start angezeigt und es werden nur die
+   verfuegbaren Karten abgefragt. Danach wird jede Karte nacheinander
+   angezeigt: erst die Frage, nach Klick auf "Antwort anzeigen" die Antwort,
+   gefolgt von der Bewertung. Ueber **Abfrage beenden** kann die Session
+   jederzeit vorzeitig abgebrochen werden – der Fortschritt der bereits
+   bewerteten Karten bleibt dabei erhalten (jede Bewertung wird sofort
+   gespeichert).
 
 ## Bewertung nach dem Aufdecken der Antwort
 
@@ -44,6 +50,15 @@ Es oeffnet sich das Hauptfenster. Beim ersten Start ist die Kartenliste leer.
 Jede Bewertung unter 4 setzt die "komplett sicher"-Serie zurueck. Gelernte
 Karten koennen im Hauptfenster ueber **Lernstatus zuruecksetzen** wieder in
 die aktive Abfrage aufgenommen werden.
+
+## Gelernte Karten wiederholen
+
+Karten, die als "gelernt" markiert wurden, tauchen in der normalen Abfrage
+nicht mehr auf. Mit **Gelernte wiederholen** koennen genau diese Karten
+gezielt (nach Thema gefiltert) noch einmal abgefragt werden, um zu pruefen,
+ob sie langfristig sitzen. Wird eine solche Karte dabei nicht mehr mit
+"komplett sicher" bewertet, faellt sie automatisch aus dem gelernt-Status
+und kommt wieder in die normale Abfrage zurueck.
 
 ## Daten
 

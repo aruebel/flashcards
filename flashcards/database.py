@@ -163,6 +163,9 @@ class Database:
             result.append(card)
         return result
 
+    def mastered_cards(self, topic_ids: Optional[List[int]] = None) -> List[Card]:
+        return [card for card in self.list_cards(topic_ids) if self.get_review_state(card.id).mastered]
+
     @staticmethod
     def _row_to_state(row) -> ReviewState:
         return ReviewState(card_id=row[0], box=row[1], mastery_streak=row[2], mastered=bool(row[3]),

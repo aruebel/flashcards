@@ -34,6 +34,7 @@ class FlashcardApp(tk.Tk):
         ttk.Button(bar, text="Themen verwalten", command=self._open_topic_manager).pack(side=tk.LEFT)
         ttk.Button(bar, text="Neue Karte", command=self._open_new_card).pack(side=tk.LEFT, padx=5)
         ttk.Button(bar, text="Abfrage starten", command=self._open_quiz_setup).pack(side=tk.LEFT)
+        ttk.Button(bar, text="Gelernte wiederholen", command=self._open_review_mastered).pack(side=tk.LEFT, padx=5)
         ttk.Button(bar, text="Exportieren...", command=self._export_backup).pack(side=tk.LEFT, padx=(20, 5))
         ttk.Button(bar, text="Importieren...", command=self._import_backup).pack(side=tk.LEFT)
 
@@ -124,6 +125,9 @@ class FlashcardApp(tk.Tk):
 
     def _open_quiz_setup(self):
         QuizSetupWindow(self, self.db, self.base_dir)
+
+    def _open_review_mastered(self):
+        QuizSetupWindow(self, self.db, self.base_dir, review_mastered=True)
 
     def _export_backup(self):
         path = filedialog.asksaveasfilename(
