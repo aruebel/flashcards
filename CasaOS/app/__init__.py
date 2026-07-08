@@ -43,6 +43,17 @@ def create_app(data_dir: Optional[Path] = None) -> Flask:
     def media_url(path):
         return f"/media/{Path(path).name}" if path else None
 
+    static_dir = Path(app.static_folder)
+
+    @app.template_global("asset_version")
+    def asset_version(filename: str) -> int:
+        """Aenderungszeitpunkt einer statischen Datei, als Cache-Busting-Query-Parameter.
+
+        Ohne das koennten Browser nach einem Deploy weiterhin ein gecachtes
+        app.js/style.css verwenden, obwohl der Server bereits neuen Code ausliefert.
+        """
+        return int((static_dir / filename).stat().st_mtime)
+
     @app.teardown_appcontext
     def close_db(_exc):
         db = g.pop("db", None)

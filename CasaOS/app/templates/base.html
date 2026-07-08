@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Karteikarten Lernsystem{% endblock %}</title>
   <script>(function(){var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t);})();</script>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ asset_version('style.css') }}">
 </head>
 <body>
   <header class="topbar">
@@ -39,7 +39,7 @@
     <img id="lightbox-img" src="" alt="Vollbild">
   </div>
 
-  <script src="{{ url_for('static', filename='app.js') }}"></script>
+  <script src="{{ url_for('static', filename='app.js') }}?v={{ asset_version('app.js') }}"></script>
   {% block scripts %}{% endblock %}
 </body>
 </html>
