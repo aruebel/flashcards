@@ -26,10 +26,10 @@ from typing import Optional
 
 from . import images as image_store
 from .database import Database
-from .models import Card, ChoiceOption, ReviewState
+from .models import Card, ChoiceOption, PuzzlePair, ReviewState
 
-FORMAT_VERSION = 2
-SUPPORTED_FORMAT_VERSIONS = (1, 2)
+FORMAT_VERSION = 3
+SUPPORTED_FORMAT_VERSIONS = (1, 2, 3)
 DATA_ENTRY = "data.json"
 IMAGES_PREFIX = "images/"
 
@@ -58,6 +58,8 @@ def export_to_zip(db: Database, zip_path: Path) -> None:
             "answer_image": _register_image(card.answer_image_path, images_to_write),
             "card_type": card.card_type,
             "choices": [{"text": c.text, "is_correct": c.is_correct} for c in db.choices_for_card(card.id)],
+            "puzzle_pairs": [{"left_text": p.left_text, "right_text": p.right_text}
+                              for p in db.puzzle_pairs_for_card(card.id)],
             "review_state": {
                 "box": state.box,
                 "mastery_streak": state.mastery_streak,
@@ -139,6 +141,10 @@ def _import_card(db: Database, base_dir: Path, zf: zipfile.ZipFile, topic_id: in
         ChoiceOption(id=None, card_id=0, text=c["text"], is_correct=c["is_correct"], position=i)
         for i, c in enumerate(card_data.get("choices", []))
     ]
+    puzzle_pairs = [
+        PuzzlePair(id=None, card_id=0, left_text=p["left_text"], right_text=p["right_text"], position=i)
+        for i, p in enumerate(card_data.get("puzzle_pairs", []))
+    ]
     new_card = db.add_card(Card(
         id=None, topic_id=topic_id,
         question_text=card_data["question_text"],
@@ -147,6 +153,7 @@ def _import_card(db: Database, base_dir: Path, zf: zipfile.ZipFile, topic_id: in
         answer_image_path=_extract_image(zf, card_data.get("answer_image"), base_dir),
         card_type=card_data.get("card_type", "text"),
         choices=choices,
+        puzzle_pairs=puzzle_pairs,
     ))
     rs = card_data["review_state"]
     db.save_review_state(ReviewState(

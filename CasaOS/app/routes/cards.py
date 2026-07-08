@@ -5,38 +5,47 @@ from flask import Blueprint, current_app, flash, jsonify, redirect, render_templ
 
 from .. import get_db
 from ..core import images as image_store
-from ..core.models import Card, ChoiceOption
+from ..core.models import Card, ChoiceOption, PuzzlePair
 
 cards_bp = Blueprint("cards", __name__)
 
 ALLOWED_IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp"}
 
-CARD_TYPE_LABELS = {"multiple_choice": "Multiple Choice", "typed": "Texteingabe"}
+CARD_TYPE_LABELS = {"multiple_choice": "Multiple Choice", "typed": "Texteingabe", "puzzle": "Puzzle"}
 
 
 def _validate_answer(card_type: str, answer_text: str, answer_image_path, form):
     """Validiert/normalisiert die kartentyp-spezifischen Antwortfelder.
 
-    Gibt (card_type, answer_text, answer_image_path, choices, error_message) zurueck;
-    error_message ist None, wenn alles gueltig ist.
+    Gibt (card_type, answer_text, answer_image_path, choices, puzzle_pairs, error_message)
+    zurueck; error_message ist None, wenn alles gueltig ist.
     """
     if card_type == "multiple_choice":
         choices = _parse_choices(form)
         if len(choices) < 2:
-            return card_type, answer_text, answer_image_path, choices, "Bitte mindestens 2 Antwortmoeglichkeiten angeben."
+            return card_type, answer_text, answer_image_path, choices, [], \
+                "Bitte mindestens 2 Antwortmoeglichkeiten angeben."
         if not any(c.is_correct for c in choices):
-            return card_type, answer_text, answer_image_path, choices, "Bitte mindestens eine richtige Antwort markieren."
-        return card_type, "", None, choices, None
+            return card_type, answer_text, answer_image_path, choices, [], \
+                "Bitte mindestens eine richtige Antwort markieren."
+        return card_type, "", None, choices, [], None
 
     if card_type == "typed":
         if not answer_text:
-            return card_type, answer_text, answer_image_path, [], \
+            return card_type, answer_text, answer_image_path, [], [], \
                 "Bei Texteingabe-Karten muss die exakt einzutippende Antwort als Text vorgegeben werden."
-        return card_type, answer_text, None, [], None
+        return card_type, answer_text, None, [], [], None
+
+    if card_type == "puzzle":
+        pairs = _parse_puzzle_pairs(form)
+        if len(pairs) < 2:
+            return card_type, answer_text, answer_image_path, [], pairs, \
+                "Bitte mindestens 2 Puzzleteile-Paare angeben."
+        return card_type, "", None, [], pairs, None
 
     if not answer_text and not answer_image_path:
-        return "text", answer_text, answer_image_path, [], "Die Antwort darf nicht leer sein."
-    return "text", answer_text, answer_image_path, [], None
+        return "text", answer_text, answer_image_path, [], [], "Die Antwort darf nicht leer sein."
+    return "text", answer_text, answer_image_path, [], [], None
 
 
 def _parse_choices(form) -> list[ChoiceOption]:
@@ -56,6 +65,25 @@ def _parse_choices(form) -> list[ChoiceOption]:
         is_correct = form.get(f"choice_correct_{uid}") == "1"
         choices.append(ChoiceOption(id=None, card_id=0, text=text, is_correct=is_correct, position=position))
     return choices
+
+
+def _parse_puzzle_pairs(form) -> list[PuzzlePair]:
+    """Liest dynamisch angelegte Puzzle-Paare (puzzle_left_<uid> / puzzle_right_<uid>) aus."""
+    uids = []
+    seen = set()
+    for key in form.keys():
+        if key.startswith("puzzle_left_") and key not in seen:
+            seen.add(key)
+            uids.append(key[len("puzzle_left_"):])
+
+    pairs = []
+    for position, uid in enumerate(uids):
+        left_text = form.get(f"puzzle_left_{uid}", "").strip()
+        right_text = form.get(f"puzzle_right_{uid}", "").strip()
+        if not left_text or not right_text:
+            continue
+        pairs.append(PuzzlePair(id=None, card_id=0, left_text=left_text, right_text=right_text, position=position))
+    return pairs
 
 
 @cards_bp.get("/")
@@ -107,7 +135,7 @@ def create_card():
         flash("Die Frage darf nicht leer sein.", "error")
         return redirect(url_for("cards.new_card_form", topic_id=topic_id))
 
-    card_type, answer_text, answer_image_path, choices, error = _validate_answer(
+    card_type, answer_text, answer_image_path, choices, puzzle_pairs, error = _validate_answer(
         card_type, answer_text, answer_image_path, request.form)
     if error:
         flash(error, "error")
@@ -116,7 +144,7 @@ def create_card():
     db.add_card(Card(
         id=None, topic_id=topic_id, question_text=question_text, answer_text=answer_text,
         question_image_path=question_image_path, answer_image_path=answer_image_path,
-        card_type=card_type, choices=choices,
+        card_type=card_type, choices=choices, puzzle_pairs=puzzle_pairs,
     ))
     flash("Karte gespeichert.", "success")
     # Formular bleibt "offen": leeres Formular mit gleichem Thema, analog
@@ -153,7 +181,7 @@ def update_card(card_id):
         flash("Die Frage darf nicht leer sein.", "error")
         return redirect(url_for("cards.edit_card_form", card_id=card_id))
 
-    card_type, answer_text, answer_image_path, choices, error = _validate_answer(
+    card_type, answer_text, answer_image_path, choices, puzzle_pairs, error = _validate_answer(
         card_type, answer_text, answer_image_path, request.form)
     if error:
         flash(error, "error")
@@ -166,6 +194,7 @@ def update_card(card_id):
     card.answer_image_path = answer_image_path
     card.card_type = card_type
     card.choices = choices
+    card.puzzle_pairs = puzzle_pairs
     db.update_card(card)
     flash("Karte gespeichert.", "success")
     return redirect(url_for("cards.index"))

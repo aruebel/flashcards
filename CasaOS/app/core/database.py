@@ -4,7 +4,7 @@ from datetime import date
 from pathlib import Path
 from typing import List, Optional
 
-from .models import Card, ChoiceOption, ReviewState, Topic
+from .models import Card, ChoiceOption, PuzzlePair, ReviewState, Topic
 from .srs import initial_state
 
 SCHEMA = """
@@ -36,6 +36,14 @@ CREATE TABLE IF NOT EXISTS card_choices (
     card_id INTEGER NOT NULL REFERENCES cards(id) ON DELETE CASCADE,
     text TEXT NOT NULL,
     is_correct INTEGER NOT NULL DEFAULT 0,
+    position INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS card_puzzle_pairs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    card_id INTEGER NOT NULL REFERENCES cards(id) ON DELETE CASCADE,
+    left_text TEXT NOT NULL,
+    right_text TEXT NOT NULL,
     position INTEGER NOT NULL DEFAULT 0
 );
 """
@@ -96,6 +104,8 @@ class Database:
         card.id = cur.lastrowid
         self._replace_choices(card.id, card.choices)
         card.choices = self.choices_for_card(card.id)
+        self._replace_puzzle_pairs(card.id, card.puzzle_pairs)
+        card.puzzle_pairs = self.puzzle_pairs_for_card(card.id)
         state = initial_state(card.id)
         self._insert_review_state(state)
         self._conn.commit()
@@ -110,6 +120,8 @@ class Database:
         )
         self._replace_choices(card.id, card.choices)
         card.choices = self.choices_for_card(card.id)
+        self._replace_puzzle_pairs(card.id, card.puzzle_pairs)
+        card.puzzle_pairs = self.puzzle_pairs_for_card(card.id)
         self._conn.commit()
 
     # --- Antwortmoeglichkeiten (Multiple Choice) -----------------------
@@ -130,6 +142,24 @@ class Database:
         return [ChoiceOption(id=r[0], card_id=r[1], text=r[2], is_correct=bool(r[3]), position=r[4])
                 for r in rows]
 
+    # --- Puzzleteile (Puzzle-Kartentyp) --------------------------------
+
+    def _replace_puzzle_pairs(self, card_id: int, pairs: List[PuzzlePair]):
+        self._conn.execute("DELETE FROM card_puzzle_pairs WHERE card_id = ?", (card_id,))
+        for position, pair in enumerate(pairs):
+            self._conn.execute(
+                "INSERT INTO card_puzzle_pairs (card_id, left_text, right_text, position) VALUES (?, ?, ?, ?)",
+                (card_id, pair.left_text, pair.right_text, position),
+            )
+
+    def puzzle_pairs_for_card(self, card_id: int) -> List[PuzzlePair]:
+        rows = self._conn.execute(
+            "SELECT id, card_id, left_text, right_text, position FROM card_puzzle_pairs "
+            "WHERE card_id = ? ORDER BY position", (card_id,)
+        ).fetchall()
+        return [PuzzlePair(id=r[0], card_id=r[1], left_text=r[2], right_text=r[3], position=r[4])
+                for r in rows]
+
     def delete_card(self, card_id: int):
         self._conn.execute("DELETE FROM cards WHERE id = ?", (card_id,))
         self._conn.commit()
@@ -143,6 +173,7 @@ class Database:
             return None
         card = self._row_to_card(row)
         card.choices = self.choices_for_card(card.id)
+        card.puzzle_pairs = self.puzzle_pairs_for_card(card.id)
         return card
 
     def list_cards(self, topic_ids: Optional[List[int]] = None) -> List[Card]:

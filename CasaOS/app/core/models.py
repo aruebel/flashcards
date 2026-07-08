@@ -20,6 +20,15 @@ class ChoiceOption:
 
 
 @dataclass
+class PuzzlePair:
+    id: Optional[int]
+    card_id: int
+    left_text: str
+    right_text: str
+    position: int = 0
+
+
+@dataclass
 class Card:
     id: Optional[int]
     topic_id: int
@@ -29,6 +38,7 @@ class Card:
     answer_image_path: Optional[str] = None
     card_type: str = "text"
     choices: List[ChoiceOption] = field(default_factory=list)
+    puzzle_pairs: List[PuzzlePair] = field(default_factory=list)
 
 
 @dataclass

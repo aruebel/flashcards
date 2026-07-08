@@ -66,6 +66,9 @@ def start():
         "choice_order": None,
         "typed_answer": "",
         "typed_correct": None,
+        "puzzle_order": None,
+        "puzzle_selected": {},
+        "puzzle_correct": None,
         "newly_mastered": 0,
         "dropped": 0,
     }
@@ -85,6 +88,9 @@ def quiz_session():
 
     card = db.get_card(quiz["card_ids"][quiz["index"]])
 
+    puzzle_right_options = []
+    puzzle_right_lookup = {}
+
     if card.card_type == "multiple_choice":
         # Reihenfolge wird einmal pro Karte gewuerfelt und in der Session
         # gehalten, damit sie zwischen Frage- und Ergebnisansicht stabil bleibt.
@@ -97,11 +103,29 @@ def quiz_session():
         order_index = {choice_id: position for position, choice_id in enumerate(order)}
         card.choices.sort(key=lambda c: order_index.get(c.id, 0))
 
+    elif card.card_type == "puzzle":
+        # Die Teil-B-Pool-Reihenfolge wird einmal pro Karte gewuerfelt; jede
+        # Zeile bekommt denselben vollstaendigen Pool (Teile verschwinden beim
+        # Zuordnen nicht, das macht die Zuordnung schwieriger).
+        order = quiz.get("puzzle_order")
+        if not order:
+            order = [p.id for p in card.puzzle_pairs]
+            random.shuffle(order)
+            quiz["puzzle_order"] = order
+            session["quiz"] = quiz
+        order_index = {pair_id: position for position, pair_id in enumerate(order)}
+        puzzle_right_options = sorted(card.puzzle_pairs, key=lambda p: order_index.get(p.id, 0))
+        puzzle_right_lookup = {p.id: p.right_text for p in card.puzzle_pairs}
+
     return render_template(
         "quiz_session.html", card=card, revealed=quiz["revealed"],
         selected_choice_ids=quiz.get("selected_choice_ids", []),
         typed_answer=quiz.get("typed_answer", ""),
         typed_correct=quiz.get("typed_correct"),
+        puzzle_right_options=puzzle_right_options,
+        puzzle_right_lookup=puzzle_right_lookup,
+        puzzle_selected=quiz.get("puzzle_selected", {}),
+        puzzle_correct=quiz.get("puzzle_correct"),
         position=quiz["index"] + 1, total=total, ratings=srs.RATING_LABELS,
     )
 
@@ -145,6 +169,31 @@ def submit_typed():
     return redirect(url_for("quiz.quiz_session"))
 
 
+@quiz_bp.post("/submit-puzzle")
+def submit_puzzle():
+    """Absenden der Puzzle-Zuordnung: deckt erst jetzt auf, welche Zuordnungen stimmen."""
+    db = get_db()
+    quiz = session.get("quiz")
+    if not quiz:
+        return redirect(url_for("quiz.setup"))
+
+    card = db.get_card(quiz["card_ids"][quiz["index"]])
+    selected = {}
+    all_correct = True
+    for pair in card.puzzle_pairs:
+        chosen_id = request.form.get(f"puzzle_answer_{pair.id}", type=int)
+        # Session-Werte werden als JSON serialisiert, Dict-Keys muessen daher Strings sein.
+        selected[str(pair.id)] = chosen_id
+        if chosen_id != pair.id:
+            all_correct = False
+
+    quiz["revealed"] = True
+    quiz["puzzle_selected"] = selected
+    quiz["puzzle_correct"] = all_correct
+    session["quiz"] = quiz
+    return redirect(url_for("quiz.quiz_session"))
+
+
 @quiz_bp.post("/rate")
 def rate():
     db = get_db()
@@ -170,6 +219,9 @@ def rate():
     quiz["choice_order"] = None
     quiz["typed_answer"] = ""
     quiz["typed_correct"] = None
+    quiz["puzzle_order"] = None
+    quiz["puzzle_selected"] = {}
+    quiz["puzzle_correct"] = None
     session["quiz"] = quiz
 
     if quiz["index"] >= len(quiz["card_ids"]):

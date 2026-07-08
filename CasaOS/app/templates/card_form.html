@@ -22,6 +22,7 @@
       <option value="text" {% if not card or card.card_type == "text" %}selected{% endif %}>Text</option>
       <option value="multiple_choice" {% if card and card.card_type == "multiple_choice" %}selected{% endif %}>Multiple Choice</option>
       <option value="typed" {% if card and card.card_type == "typed" %}selected{% endif %}>Texteingabe (z.&nbsp;B. Terminal-Befehle)</option>
+      <option value="puzzle" {% if card and card.card_type == "puzzle" %}selected{% endif %}>Puzzle (Teile zuordnen)</option>
     </select>
   </div>
   <p id="card_type_hint" class="hint"></p>
@@ -89,6 +90,27 @@
     <button type="button" onclick="addChoiceRow()">Option hinzufuegen</button>
   </fieldset>
 
+  <fieldset class="card-side hidden" id="puzzle_side">
+    <legend>Puzzleteile</legend>
+    <p class="hint">Jede Zeile ist ein Paar: Teil A ist die feste Vorgabe, Teil B muss beim Lernen richtig
+      zugeordnet werden. Mindestens 2 Paare.</p>
+    <table class="puzzle-edit-table">
+      <thead><tr><th>Teil A</th><th>Teil B (Zuordnung)</th><th></th></tr></thead>
+      <tbody id="puzzle-pair-list">
+        {% if card %}
+          {% for pair in card.puzzle_pairs %}
+          <tr class="puzzle-pair-row" data-uid="{{ pair.id }}">
+            <td><input type="text" name="puzzle_left_{{ pair.id }}" value="{{ pair.left_text }}" placeholder="Teil A"></td>
+            <td><input type="text" name="puzzle_right_{{ pair.id }}" value="{{ pair.right_text }}" placeholder="Teil B"></td>
+            <td><button type="button" class="link-button danger" onclick="removePuzzleRow(this)">Entfernen</button></td>
+          </tr>
+          {% endfor %}
+        {% endif %}
+      </tbody>
+    </table>
+    <button type="button" onclick="addPuzzleRow()">Paar hinzufuegen</button>
+  </fieldset>
+
   <div class="form-actions">
     <button type="submit">Speichern</button>
     {% if card %}
@@ -110,6 +132,10 @@
   if (document.querySelectorAll("#choice-list .choice-row").length === 0) {
     addChoiceRow();
     addChoiceRow();
+  }
+  if (document.querySelectorAll("#puzzle-pair-list .puzzle-pair-row").length === 0) {
+    addPuzzleRow();
+    addPuzzleRow();
   }
   {% endif %}
   {% if just_saved %}

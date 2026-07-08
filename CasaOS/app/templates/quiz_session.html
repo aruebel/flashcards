@@ -38,6 +38,31 @@
         <button type="submit">Antwort pruefen</button>
       </div>
     </form>
+  {% elif card.card_type == "puzzle" and not revealed %}
+    <p class="hint">Ordne jedem Teil A den passenden Teil B zu. Die Teil-B-Optionen bleiben in jeder
+      Zeile vollstaendig auswaehlbar und verschwinden nicht, wenn sie schon anderswo ausgewaehlt wurden.</p>
+    <form method="post" action="{{ url_for('quiz.submit_puzzle') }}">
+      <table class="puzzle-quiz-table">
+        <tbody>
+          {% for pair in card.puzzle_pairs %}
+          <tr>
+            <td class="puzzle-left">{{ pair.left_text }}</td>
+            <td>
+              <select name="puzzle_answer_{{ pair.id }}" required>
+                <option value="" disabled selected>-- waehlen --</option>
+                {% for option in puzzle_right_options %}
+                  <option value="{{ option.id }}">{{ option.right_text }}</option>
+                {% endfor %}
+              </select>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div class="form-actions">
+        <button type="submit">Antwort pruefen</button>
+      </div>
+    </form>
   {% elif not revealed %}
     <form method="post" action="{{ url_for('quiz.reveal') }}">
       <button type="submit">Antwort anzeigen</button>
@@ -70,6 +95,24 @@
       {% endif %}
       <p class="hint">Erwartete Antwort:</p>
       <p class="quiz-text"><code>{{ card.answer_text }}</code></p>
+    {% elif card.card_type == "puzzle" %}
+      <p class="typed-feedback {% if puzzle_correct %}correct{% else %}incorrect{% endif %}">
+        {% if puzzle_correct %}✓ Alles richtig zugeordnet!{% else %}✗ Nicht alles richtig zugeordnet{% endif %}
+      </p>
+      <table class="card-table puzzle-quiz-table result">
+        <thead><tr><th>Teil A</th><th>Deine Zuordnung</th><th>Richtige Zuordnung</th></tr></thead>
+        <tbody>
+          {% for pair in card.puzzle_pairs %}
+            {% set chosen_id = puzzle_selected.get(pair.id | string) %}
+            {% set is_row_correct = chosen_id == pair.id %}
+            <tr class="{% if is_row_correct %}correct{% else %}incorrect{% endif %}">
+              <td>{{ pair.left_text }}</td>
+              <td>{{ puzzle_right_lookup.get(chosen_id, "(keine Auswahl)") }} {% if is_row_correct %}✓{% else %}✗{% endif %}</td>
+              <td>{{ pair.right_text }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     {% else %}
       <p class="quiz-text">{{ card.answer_text }}</p>
       {% if card.answer_image_path %}

@@ -106,19 +106,24 @@ document.addEventListener("paste", (event) => {
   }
 });
 
-// --- Karteneditor: Kartentyp (Text / Multiple Choice / Texteingabe) --------
+// --- Karteneditor: Kartentyp (Text / Multiple Choice / Texteingabe / Puzzle) -
 
 let choiceRowCounter = 0;
+let puzzleRowCounter = 0;
 
 const CARD_TYPE_HINTS = {
   typed: "Bei der Abfrage muss die Antwort exakt eingetippt werden (Gross-/Kleinschreibung und Leerzeichen zaehlen).",
+  puzzle: "Bei der Abfrage bleiben alle Teil-B-Optionen in jeder Zeile auswaehlbar und verschwinden nicht, "
+    + "wenn sie schon einer anderen Zeile zugeordnet wurden - das macht die Zuordnung anspruchsvoller.",
 };
 
 function onCardTypeChange() {
   const type = document.getElementById("card_type").value;
   const isMultipleChoice = type === "multiple_choice";
-  document.getElementById("answer_text_side").classList.toggle("hidden", isMultipleChoice);
+  const isPuzzle = type === "puzzle";
+  document.getElementById("answer_text_side").classList.toggle("hidden", isMultipleChoice || isPuzzle);
   document.getElementById("choices_side").classList.toggle("hidden", !isMultipleChoice);
+  document.getElementById("puzzle_side").classList.toggle("hidden", !isPuzzle);
 
   const hint = document.getElementById("card_type_hint");
   if (hint) {
@@ -142,6 +147,24 @@ function addChoiceRow() {
 
 function removeChoiceRow(button) {
   button.closest(".choice-row").remove();
+}
+
+function addPuzzleRow() {
+  const uid = `n${puzzleRowCounter++}`;
+  const row = document.createElement("tr");
+  row.className = "puzzle-pair-row";
+  row.dataset.uid = uid;
+  row.innerHTML = `
+    <td><input type="text" name="puzzle_left_${uid}" placeholder="Teil A"></td>
+    <td><input type="text" name="puzzle_right_${uid}" placeholder="Teil B"></td>
+    <td><button type="button" class="link-button danger" onclick="removePuzzleRow(this)">Entfernen</button></td>
+  `;
+  document.getElementById("puzzle-pair-list").appendChild(row);
+  row.querySelector('input[type="text"]').focus();
+}
+
+function removePuzzleRow(button) {
+  button.closest(".puzzle-pair-row").remove();
 }
 
 // --- Abfrage: Klick auf Bild in voller Groesse anzeigen -------------------
