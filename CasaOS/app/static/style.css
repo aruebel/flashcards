@@ -330,6 +330,32 @@ legend { font-weight: 600; padding: 0 6px; }
 
 .choice-row input[type="text"] { flex: 1; }
 
+.typed-answer-input {
+  width: 100%;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 1rem;
+  margin-top: 16px;
+  resize: vertical;
+}
+
+.typed-feedback {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.typed-feedback.correct { color: #16a34a; }
+.typed-feedback.incorrect { color: var(--color-danger); }
+
+[data-theme="dark"] .typed-feedback.correct { color: #4ade80; }
+
+code {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  background: var(--color-bg);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
 .lightbox {
   position: fixed;
   inset: 0;

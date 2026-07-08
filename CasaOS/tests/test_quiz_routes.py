@@ -186,6 +186,52 @@ def test_choice_order_stays_stable_between_question_and_result(app, client, topi
     assert positions1 == positions2  # Reihenfolge bleibt zwischen Frage- und Ergebnisansicht gleich
 
 
+def _add_typed_answer_card(app, topic_id):
+    with app.app_context():
+        db = get_db()
+        return db.add_card(Card(
+            id=None, topic_id=topic_id, question_text="Aktuelles Verzeichnis anzeigen?",
+            answer_text="pwd", card_type="typed",
+        ))
+
+
+def test_typed_card_shows_input_field_before_answering(app, client, topic_id):
+    _add_typed_answer_card(app, topic_id)
+    r = client.post("/quiz/setup", data={"review_mastered": "0", "only_due": "on", "count": "all"},
+                     follow_redirects=True)
+    assert b'name="typed_answer"' in r.data
+    assert b"pwd" not in r.data  # Loesung wird vor dem Absenden nicht verraten
+    assert b'name="rating"' not in r.data
+
+
+def test_typed_card_marks_correct_answer(app, client, topic_id):
+    _add_typed_answer_card(app, topic_id)
+    client.post("/quiz/setup", data={"review_mastered": "0", "only_due": "on", "count": "all"})
+
+    r = client.post("/quiz/submit-typed", data={"typed_answer": "pwd"}, follow_redirects=True)
+    assert "✓ Richtig!".encode() in r.data
+    assert b'name="rating"' in r.data
+
+
+def test_typed_card_trims_whitespace_before_comparing(app, client, topic_id):
+    _add_typed_answer_card(app, topic_id)
+    client.post("/quiz/setup", data={"review_mastered": "0", "only_due": "on", "count": "all"})
+
+    r = client.post("/quiz/submit-typed", data={"typed_answer": "  pwd  "}, follow_redirects=True)
+    assert "✓ Richtig!".encode() in r.data
+
+
+def test_typed_card_marks_wrong_answer_and_shows_expected(app, client, topic_id):
+    _add_typed_answer_card(app, topic_id)
+    client.post("/quiz/setup", data={"review_mastered": "0", "only_due": "on", "count": "all"})
+
+    r = client.post("/quiz/submit-typed", data={"typed_answer": "ls"}, follow_redirects=True)
+    body = r.data.decode("utf-8")
+    assert "Nicht ganz richtig" in body
+    assert "<code>ls</code>" in body  # eigene Eingabe wird gezeigt
+    assert "<code>pwd</code>" in body  # erwartete Antwort wird gezeigt
+
+
 def test_revealed_text_card_still_shows_question(app, client, topic_id):
     add_card(app, topic_id, question="Was ist Python?", answer="Eine Sprache")
     client.post("/quiz/setup", data={"review_mastered": "0", "only_due": "on", "count": "all"})

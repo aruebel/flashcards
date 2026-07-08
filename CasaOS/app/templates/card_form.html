@@ -21,8 +21,10 @@
     <select name="card_type" id="card_type" onchange="onCardTypeChange()">
       <option value="text" {% if not card or card.card_type == "text" %}selected{% endif %}>Text</option>
       <option value="multiple_choice" {% if card and card.card_type == "multiple_choice" %}selected{% endif %}>Multiple Choice</option>
+      <option value="typed" {% if card and card.card_type == "typed" %}selected{% endif %}>Texteingabe (z.&nbsp;B. Terminal-Befehle)</option>
     </select>
   </div>
+  <p id="card_type_hint" class="hint"></p>
 
   {% set side = "question" %}
   {% set label = "Frage" %}

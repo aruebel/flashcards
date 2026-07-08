@@ -30,6 +30,14 @@
       </div>
       <button type="submit" class="choice-submit-button">Antwort pruefen</button>
     </form>
+  {% elif card.card_type == "typed" and not revealed %}
+    <form method="post" action="{{ url_for('quiz.submit_typed') }}">
+      <textarea name="typed_answer" rows="2" class="typed-answer-input" autofocus
+                placeholder="Antwort eintippen..."></textarea>
+      <div class="form-actions">
+        <button type="submit">Antwort pruefen</button>
+      </div>
+    </form>
   {% elif not revealed %}
     <form method="post" action="{{ url_for('quiz.reveal') }}">
       <button type="submit">Antwort anzeigen</button>
@@ -52,6 +60,16 @@
           </li>
         {% endfor %}
       </ul>
+    {% elif card.card_type == "typed" %}
+      <p class="typed-feedback {% if typed_correct %}correct{% else %}incorrect{% endif %}">
+        {% if typed_correct %}✓ Richtig!{% else %}✗ Nicht ganz richtig{% endif %}
+      </p>
+      {% if not typed_correct %}
+        <p class="hint">Deine Eingabe:</p>
+        <p class="quiz-text"><code>{{ typed_answer }}</code></p>
+      {% endif %}
+      <p class="hint">Erwartete Antwort:</p>
+      <p class="quiz-text"><code>{{ card.answer_text }}</code></p>
     {% else %}
       <p class="quiz-text">{{ card.answer_text }}</p>
       {% if card.answer_image_path %}

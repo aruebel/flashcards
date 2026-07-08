@@ -64,6 +64,8 @@ def start():
         "revealed": False,
         "selected_choice_ids": [],
         "choice_order": None,
+        "typed_answer": "",
+        "typed_correct": None,
         "newly_mastered": 0,
         "dropped": 0,
     }
@@ -98,6 +100,8 @@ def quiz_session():
     return render_template(
         "quiz_session.html", card=card, revealed=quiz["revealed"],
         selected_choice_ids=quiz.get("selected_choice_ids", []),
+        typed_answer=quiz.get("typed_answer", ""),
+        typed_correct=quiz.get("typed_correct"),
         position=quiz["index"] + 1, total=total, ratings=srs.RATING_LABELS,
     )
 
@@ -120,6 +124,23 @@ def answer():
         return redirect(url_for("quiz.setup"))
     quiz["revealed"] = True
     quiz["selected_choice_ids"] = request.form.getlist("choice_ids", type=int)
+    session["quiz"] = quiz
+    return redirect(url_for("quiz.quiz_session"))
+
+
+@quiz_bp.post("/submit-typed")
+def submit_typed():
+    """Absenden der eingetippten Antwort: vergleicht sie exakt (nach Trimmen) mit der vorgegebenen Antwort."""
+    db = get_db()
+    quiz = session.get("quiz")
+    if not quiz:
+        return redirect(url_for("quiz.setup"))
+
+    card = db.get_card(quiz["card_ids"][quiz["index"]])
+    typed_answer = request.form.get("typed_answer", "")
+    quiz["revealed"] = True
+    quiz["typed_answer"] = typed_answer
+    quiz["typed_correct"] = typed_answer.strip() == (card.answer_text or "").strip()
     session["quiz"] = quiz
     return redirect(url_for("quiz.quiz_session"))
 
@@ -147,6 +168,8 @@ def rate():
     quiz["revealed"] = False
     quiz["selected_choice_ids"] = []
     quiz["choice_order"] = None
+    quiz["typed_answer"] = ""
+    quiz["typed_correct"] = None
     session["quiz"] = quiz
 
     if quiz["index"] >= len(quiz["card_ids"]):

@@ -146,3 +146,35 @@ def test_create_multiple_choice_card_requires_correct_option(client, topic_id):
         follow_redirects=True,
     )
     assert "mindestens eine richtige Antwort".encode() in r.data
+
+
+def test_create_typed_answer_card(app, client, topic_id):
+    r = client.post(
+        "/cards/new",
+        data={
+            "topic_id": topic_id, "card_type": "typed",
+            "question_text": "Aktuelles Verzeichnis anzeigen?", "answer_text": "pwd",
+            "question_image_path": "", "answer_image_path": "",
+        },
+        follow_redirects=True,
+    )
+    assert b"gespeichert" in r.data
+    with app.app_context():
+        db = get_db()
+        card = db.get_card(db.list_cards(topic_ids=[topic_id])[0].id)
+        assert card.card_type == "typed"
+        assert card.answer_text == "pwd"
+        assert card.choices == []
+
+
+def test_create_typed_answer_card_requires_answer_text(client, topic_id):
+    r = client.post(
+        "/cards/new",
+        data={
+            "topic_id": topic_id, "card_type": "typed",
+            "question_text": "Frage?", "answer_text": "",
+            "question_image_path": "", "answer_image_path": "",
+        },
+        follow_redirects=True,
+    )
+    assert "exakt einzutippende Antwort".encode() in r.data

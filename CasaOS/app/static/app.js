@@ -106,14 +106,24 @@ document.addEventListener("paste", (event) => {
   }
 });
 
-// --- Karteneditor: Kartentyp (Text / Multiple Choice) ----------------------
+// --- Karteneditor: Kartentyp (Text / Multiple Choice / Texteingabe) --------
 
 let choiceRowCounter = 0;
 
+const CARD_TYPE_HINTS = {
+  typed: "Bei der Abfrage muss die Antwort exakt eingetippt werden (Gross-/Kleinschreibung und Leerzeichen zaehlen).",
+};
+
 function onCardTypeChange() {
-  const isMultipleChoice = document.getElementById("card_type").value === "multiple_choice";
+  const type = document.getElementById("card_type").value;
+  const isMultipleChoice = type === "multiple_choice";
   document.getElementById("answer_text_side").classList.toggle("hidden", isMultipleChoice);
   document.getElementById("choices_side").classList.toggle("hidden", !isMultipleChoice);
+
+  const hint = document.getElementById("card_type_hint");
+  if (hint) {
+    hint.textContent = CARD_TYPE_HINTS[type] || "";
+  }
 }
 
 function addChoiceRow() {

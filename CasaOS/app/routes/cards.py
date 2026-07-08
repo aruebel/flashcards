@@ -11,6 +11,33 @@ cards_bp = Blueprint("cards", __name__)
 
 ALLOWED_IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp"}
 
+CARD_TYPE_LABELS = {"multiple_choice": "Multiple Choice", "typed": "Texteingabe"}
+
+
+def _validate_answer(card_type: str, answer_text: str, answer_image_path, form):
+    """Validiert/normalisiert die kartentyp-spezifischen Antwortfelder.
+
+    Gibt (card_type, answer_text, answer_image_path, choices, error_message) zurueck;
+    error_message ist None, wenn alles gueltig ist.
+    """
+    if card_type == "multiple_choice":
+        choices = _parse_choices(form)
+        if len(choices) < 2:
+            return card_type, answer_text, answer_image_path, choices, "Bitte mindestens 2 Antwortmoeglichkeiten angeben."
+        if not any(c.is_correct for c in choices):
+            return card_type, answer_text, answer_image_path, choices, "Bitte mindestens eine richtige Antwort markieren."
+        return card_type, "", None, choices, None
+
+    if card_type == "typed":
+        if not answer_text:
+            return card_type, answer_text, answer_image_path, [], \
+                "Bei Texteingabe-Karten muss die exakt einzutippende Antwort als Text vorgegeben werden."
+        return card_type, answer_text, None, [], None
+
+    if not answer_text and not answer_image_path:
+        return "text", answer_text, answer_image_path, [], "Die Antwort darf nicht leer sein."
+    return "text", answer_text, answer_image_path, [], None
+
 
 def _parse_choices(form) -> list[ChoiceOption]:
     """Liest dynamisch angelegte Antwortmoeglichkeiten (choice_text_<uid> / choice_correct_<uid>) aus."""
@@ -47,7 +74,7 @@ def index():
             "id": card.id,
             "topic_name": topics_by_id.get(card.topic_id, "?"),
             "preview": (card.question_text[:80] or "(nur Bild)"),
-            "type_label": "Multiple Choice" if card.card_type == "multiple_choice" else "Text",
+            "type_label": CARD_TYPE_LABELS.get(card.card_type, "Text"),
             "status": status,
         })
 
@@ -80,21 +107,11 @@ def create_card():
         flash("Die Frage darf nicht leer sein.", "error")
         return redirect(url_for("cards.new_card_form", topic_id=topic_id))
 
-    if card_type == "multiple_choice":
-        choices = _parse_choices(request.form)
-        if len(choices) < 2:
-            flash("Bitte mindestens 2 Antwortmoeglichkeiten angeben.", "error")
-            return redirect(url_for("cards.new_card_form", topic_id=topic_id))
-        if not any(c.is_correct for c in choices):
-            flash("Bitte mindestens eine richtige Antwort markieren.", "error")
-            return redirect(url_for("cards.new_card_form", topic_id=topic_id))
-        answer_text, answer_image_path = "", None
-    else:
-        card_type = "text"
-        choices = []
-        if not answer_text and not answer_image_path:
-            flash("Die Antwort darf nicht leer sein.", "error")
-            return redirect(url_for("cards.new_card_form", topic_id=topic_id))
+    card_type, answer_text, answer_image_path, choices, error = _validate_answer(
+        card_type, answer_text, answer_image_path, request.form)
+    if error:
+        flash(error, "error")
+        return redirect(url_for("cards.new_card_form", topic_id=topic_id))
 
     db.add_card(Card(
         id=None, topic_id=topic_id, question_text=question_text, answer_text=answer_text,
@@ -136,21 +153,11 @@ def update_card(card_id):
         flash("Die Frage darf nicht leer sein.", "error")
         return redirect(url_for("cards.edit_card_form", card_id=card_id))
 
-    if card_type == "multiple_choice":
-        choices = _parse_choices(request.form)
-        if len(choices) < 2:
-            flash("Bitte mindestens 2 Antwortmoeglichkeiten angeben.", "error")
-            return redirect(url_for("cards.edit_card_form", card_id=card_id))
-        if not any(c.is_correct for c in choices):
-            flash("Bitte mindestens eine richtige Antwort markieren.", "error")
-            return redirect(url_for("cards.edit_card_form", card_id=card_id))
-        answer_text, answer_image_path = "", None
-    else:
-        card_type = "text"
-        choices = []
-        if not answer_text and not answer_image_path:
-            flash("Die Antwort darf nicht leer sein.", "error")
-            return redirect(url_for("cards.edit_card_form", card_id=card_id))
+    card_type, answer_text, answer_image_path, choices, error = _validate_answer(
+        card_type, answer_text, answer_image_path, request.form)
+    if error:
+        flash(error, "error")
+        return redirect(url_for("cards.edit_card_form", card_id=card_id))
 
     card.topic_id = request.form.get("topic_id", type=int)
     card.question_text = question_text
