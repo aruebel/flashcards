@@ -51,7 +51,7 @@
               <select name="puzzle_answer_{{ pair.id }}" required>
                 <option value="" disabled selected>-- waehlen --</option>
                 {% for option in puzzle_right_options %}
-                  <option value="{{ option.id }}">{{ option.right_text }}</option>
+                  <option value="{{ option }}">{{ option }}</option>
                 {% endfor %}
               </select>
             </td>
@@ -103,11 +103,11 @@
         <thead><tr><th>Teil A</th><th>Deine Zuordnung</th><th>Richtige Zuordnung</th></tr></thead>
         <tbody>
           {% for pair in card.puzzle_pairs %}
-            {% set chosen_id = puzzle_selected.get(pair.id | string) %}
-            {% set is_row_correct = chosen_id == pair.id %}
+            {% set chosen_text = puzzle_selected.get(pair.id | string) %}
+            {% set is_row_correct = puzzle_row_correct.get(pair.id | string, false) %}
             <tr class="{% if is_row_correct %}correct{% else %}incorrect{% endif %}">
               <td>{{ pair.left_text }}</td>
-              <td>{{ puzzle_right_lookup.get(chosen_id, "(keine Auswahl)") }} {% if is_row_correct %}✓{% else %}✗{% endif %}</td>
+              <td>{{ chosen_text or "(keine Auswahl)" }} {% if is_row_correct %}✓{% else %}✗{% endif %}</td>
               <td>{{ pair.right_text }}</td>
             </tr>
           {% endfor %}
