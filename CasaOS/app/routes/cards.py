@@ -5,11 +5,30 @@ from flask import Blueprint, current_app, flash, jsonify, redirect, render_templ
 
 from .. import get_db
 from ..core import images as image_store
-from ..core.models import Card
+from ..core.models import Card, ChoiceOption
 
 cards_bp = Blueprint("cards", __name__)
 
 ALLOWED_IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp"}
+
+
+def _parse_choices(form) -> list[ChoiceOption]:
+    """Liest dynamisch angelegte Antwortmoeglichkeiten (choice_text_<uid> / choice_correct_<uid>) aus."""
+    uids = []
+    seen = set()
+    for key in form.keys():
+        if key.startswith("choice_text_") and key not in seen:
+            seen.add(key)
+            uids.append(key[len("choice_text_"):])
+
+    choices = []
+    for position, uid in enumerate(uids):
+        text = form.get(f"choice_text_{uid}", "").strip()
+        if not text:
+            continue
+        is_correct = form.get(f"choice_correct_{uid}") == "1"
+        choices.append(ChoiceOption(id=None, card_id=0, text=text, is_correct=is_correct, position=position))
+    return choices
 
 
 @cards_bp.get("/")
@@ -28,6 +47,7 @@ def index():
             "id": card.id,
             "topic_name": topics_by_id.get(card.topic_id, "?"),
             "preview": (card.question_text[:80] or "(nur Bild)"),
+            "type_label": "Multiple Choice" if card.card_type == "multiple_choice" else "Text",
             "status": status,
         })
 
@@ -50,6 +70,7 @@ def new_card_form():
 def create_card():
     db = get_db()
     topic_id = request.form.get("topic_id", type=int)
+    card_type = request.form.get("card_type", "text")
     question_text = request.form.get("question_text", "").strip()
     answer_text = request.form.get("answer_text", "").strip()
     question_image_path = request.form.get("question_image_path") or None
@@ -58,13 +79,27 @@ def create_card():
     if not question_text and not question_image_path:
         flash("Die Frage darf nicht leer sein.", "error")
         return redirect(url_for("cards.new_card_form", topic_id=topic_id))
-    if not answer_text and not answer_image_path:
-        flash("Die Antwort darf nicht leer sein.", "error")
-        return redirect(url_for("cards.new_card_form", topic_id=topic_id))
+
+    if card_type == "multiple_choice":
+        choices = _parse_choices(request.form)
+        if len(choices) < 2:
+            flash("Bitte mindestens 2 Antwortmoeglichkeiten angeben.", "error")
+            return redirect(url_for("cards.new_card_form", topic_id=topic_id))
+        if not any(c.is_correct for c in choices):
+            flash("Bitte mindestens eine richtige Antwort markieren.", "error")
+            return redirect(url_for("cards.new_card_form", topic_id=topic_id))
+        answer_text, answer_image_path = "", None
+    else:
+        card_type = "text"
+        choices = []
+        if not answer_text and not answer_image_path:
+            flash("Die Antwort darf nicht leer sein.", "error")
+            return redirect(url_for("cards.new_card_form", topic_id=topic_id))
 
     db.add_card(Card(
         id=None, topic_id=topic_id, question_text=question_text, answer_text=answer_text,
         question_image_path=question_image_path, answer_image_path=answer_image_path,
+        card_type=card_type, choices=choices,
     ))
     flash("Karte gespeichert.", "success")
     # Formular bleibt "offen": leeres Formular mit gleichem Thema, analog
@@ -91,6 +126,7 @@ def update_card(card_id):
         flash("Karte nicht gefunden.", "error")
         return redirect(url_for("cards.index"))
 
+    card_type = request.form.get("card_type", "text")
     question_text = request.form.get("question_text", "").strip()
     answer_text = request.form.get("answer_text", "").strip()
     question_image_path = request.form.get("question_image_path") or None
@@ -99,15 +135,30 @@ def update_card(card_id):
     if not question_text and not question_image_path:
         flash("Die Frage darf nicht leer sein.", "error")
         return redirect(url_for("cards.edit_card_form", card_id=card_id))
-    if not answer_text and not answer_image_path:
-        flash("Die Antwort darf nicht leer sein.", "error")
-        return redirect(url_for("cards.edit_card_form", card_id=card_id))
+
+    if card_type == "multiple_choice":
+        choices = _parse_choices(request.form)
+        if len(choices) < 2:
+            flash("Bitte mindestens 2 Antwortmoeglichkeiten angeben.", "error")
+            return redirect(url_for("cards.edit_card_form", card_id=card_id))
+        if not any(c.is_correct for c in choices):
+            flash("Bitte mindestens eine richtige Antwort markieren.", "error")
+            return redirect(url_for("cards.edit_card_form", card_id=card_id))
+        answer_text, answer_image_path = "", None
+    else:
+        card_type = "text"
+        choices = []
+        if not answer_text and not answer_image_path:
+            flash("Die Antwort darf nicht leer sein.", "error")
+            return redirect(url_for("cards.edit_card_form", card_id=card_id))
 
     card.topic_id = request.form.get("topic_id", type=int)
     card.question_text = question_text
     card.answer_text = answer_text
     card.question_image_path = question_image_path
     card.answer_image_path = answer_image_path
+    card.card_type = card_type
+    card.choices = choices
     db.update_card(card)
     flash("Karte gespeichert.", "success")
     return redirect(url_for("cards.index"))

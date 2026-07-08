@@ -10,19 +10,46 @@
 </div>
 
 <div class="quiz-card">
-  <h2>{{ "Antwort" if revealed else "Frage" }}</h2>
-  <p class="quiz-text">{{ card.answer_text if revealed else card.question_text }}</p>
+  <h2>Frage</h2>
+  <p class="quiz-text">{{ card.question_text }}</p>
 
-  {% set image_path = card.answer_image_path if revealed else card.question_image_path %}
-  {% if image_path %}
-    <img class="quiz-image" src="{{ image_path | media_url }}" alt="Kartenbild">
+  {% if card.question_image_path %}
+    <img class="quiz-image" src="{{ card.question_image_path | media_url }}" alt="Fragebild">
   {% endif %}
 
-  {% if not revealed %}
+  {% if card.card_type == "multiple_choice" and not revealed %}
+    <form method="post" action="{{ url_for('quiz.answer') }}" class="choice-list">
+      {% for choice in card.choices %}
+        <button type="submit" name="choice_id" value="{{ choice.id }}" class="choice-button">{{ choice.text }}</button>
+      {% endfor %}
+    </form>
+  {% elif not revealed %}
     <form method="post" action="{{ url_for('quiz.reveal') }}">
       <button type="submit">Antwort anzeigen</button>
     </form>
   {% else %}
+    <hr class="quiz-divider">
+    <h2>Antwort</h2>
+
+    {% if card.card_type == "multiple_choice" %}
+      <ul class="choice-list result">
+        {% for choice in card.choices %}
+          <li class="choice-result
+              {% if choice.is_correct %}correct{% endif %}
+              {% if choice.id == selected_choice_id and not choice.is_correct %}selected-wrong{% endif %}">
+            {{ choice.text }}
+            {% if choice.is_correct %}✓{% endif %}
+            {% if choice.id == selected_choice_id and not choice.is_correct %}✗ (deine Wahl){% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="quiz-text">{{ card.answer_text }}</p>
+      {% if card.answer_image_path %}
+        <img class="quiz-image" src="{{ card.answer_image_path | media_url }}" alt="Antwortbild">
+      {% endif %}
+    {% endif %}
+
     <form method="post" action="{{ url_for('quiz.rate') }}" class="rating-row">
       {% for value, label in ratings.items() %}
         <button type="submit" name="rating" value="{{ value }}">({{ value }}) {{ label }}</button>

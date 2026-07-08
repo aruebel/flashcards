@@ -4,7 +4,7 @@ from datetime import date
 from pathlib import Path
 from typing import List, Optional
 
-from .models import Card, ReviewState, Topic
+from .models import Card, ChoiceOption, ReviewState, Topic
 from .srs import initial_state
 
 SCHEMA = """
@@ -30,6 +30,14 @@ CREATE TABLE IF NOT EXISTS review_state (
     due_date TEXT NOT NULL,
     total_reviews INTEGER NOT NULL DEFAULT 0
 );
+
+CREATE TABLE IF NOT EXISTS card_choices (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    card_id INTEGER NOT NULL REFERENCES cards(id) ON DELETE CASCADE,
+    text TEXT NOT NULL,
+    is_correct INTEGER NOT NULL DEFAULT 0,
+    position INTEGER NOT NULL DEFAULT 0
+);
 """
 
 
@@ -39,7 +47,14 @@ class Database:
         self._conn = sqlite3.connect(str(db_path))
         self._conn.execute("PRAGMA foreign_keys = ON")
         self._conn.executescript(SCHEMA)
+        self._migrate()
         self._conn.commit()
+
+    def _migrate(self):
+        """Fuegt Spalten hinzu, die in bereits bestehenden Datenbanken noch fehlen."""
+        columns = {row[1] for row in self._conn.execute("PRAGMA table_info(cards)")}
+        if "card_type" not in columns:
+            self._conn.execute("ALTER TABLE cards ADD COLUMN card_type TEXT NOT NULL DEFAULT 'text'")
 
     def close(self):
         self._conn.close()
@@ -73,11 +88,14 @@ class Database:
 
     def add_card(self, card: Card) -> Card:
         cur = self._conn.execute(
-            "INSERT INTO cards (topic_id, question_text, answer_text, question_image_path, answer_image_path) "
-            "VALUES (?, ?, ?, ?, ?)",
-            (card.topic_id, card.question_text, card.answer_text, card.question_image_path, card.answer_image_path),
+            "INSERT INTO cards (topic_id, question_text, answer_text, question_image_path, answer_image_path, card_type) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (card.topic_id, card.question_text, card.answer_text, card.question_image_path,
+             card.answer_image_path, card.card_type),
         )
         card.id = cur.lastrowid
+        self._replace_choices(card.id, card.choices)
+        card.choices = self.choices_for_card(card.id)
         state = initial_state(card.id)
         self._insert_review_state(state)
         self._conn.commit()
@@ -86,11 +104,31 @@ class Database:
     def update_card(self, card: Card):
         self._conn.execute(
             "UPDATE cards SET topic_id=?, question_text=?, answer_text=?, "
-            "question_image_path=?, answer_image_path=? WHERE id=?",
+            "question_image_path=?, answer_image_path=?, card_type=? WHERE id=?",
             (card.topic_id, card.question_text, card.answer_text,
-             card.question_image_path, card.answer_image_path, card.id),
+             card.question_image_path, card.answer_image_path, card.card_type, card.id),
         )
+        self._replace_choices(card.id, card.choices)
+        card.choices = self.choices_for_card(card.id)
         self._conn.commit()
+
+    # --- Antwortmoeglichkeiten (Multiple Choice) -----------------------
+
+    def _replace_choices(self, card_id: int, choices: List[ChoiceOption]):
+        self._conn.execute("DELETE FROM card_choices WHERE card_id = ?", (card_id,))
+        for position, choice in enumerate(choices):
+            self._conn.execute(
+                "INSERT INTO card_choices (card_id, text, is_correct, position) VALUES (?, ?, ?, ?)",
+                (card_id, choice.text, int(choice.is_correct), position),
+            )
+
+    def choices_for_card(self, card_id: int) -> List[ChoiceOption]:
+        rows = self._conn.execute(
+            "SELECT id, card_id, text, is_correct, position FROM card_choices "
+            "WHERE card_id = ? ORDER BY position", (card_id,)
+        ).fetchall()
+        return [ChoiceOption(id=r[0], card_id=r[1], text=r[2], is_correct=bool(r[3]), position=r[4])
+                for r in rows]
 
     def delete_card(self, card_id: int):
         self._conn.execute("DELETE FROM cards WHERE id = ?", (card_id,))
@@ -98,28 +136,33 @@ class Database:
 
     def get_card(self, card_id: int) -> Optional[Card]:
         row = self._conn.execute(
-            "SELECT id, topic_id, question_text, answer_text, question_image_path, answer_image_path "
+            "SELECT id, topic_id, question_text, answer_text, question_image_path, answer_image_path, card_type "
             "FROM cards WHERE id = ?", (card_id,)
         ).fetchone()
-        return self._row_to_card(row) if row else None
+        if row is None:
+            return None
+        card = self._row_to_card(row)
+        card.choices = self.choices_for_card(card.id)
+        return card
 
     def list_cards(self, topic_ids: Optional[List[int]] = None) -> List[Card]:
         if topic_ids:
             placeholders = ",".join("?" * len(topic_ids))
             rows = self._conn.execute(
-                f"SELECT id, topic_id, question_text, answer_text, question_image_path, answer_image_path "
+                f"SELECT id, topic_id, question_text, answer_text, question_image_path, answer_image_path, card_type "
                 f"FROM cards WHERE topic_id IN ({placeholders})", topic_ids
             ).fetchall()
         else:
             rows = self._conn.execute(
-                "SELECT id, topic_id, question_text, answer_text, question_image_path, answer_image_path FROM cards"
+                "SELECT id, topic_id, question_text, answer_text, question_image_path, answer_image_path, card_type "
+                "FROM cards"
             ).fetchall()
         return [self._row_to_card(r) for r in rows]
 
     @staticmethod
     def _row_to_card(row) -> Card:
         return Card(id=row[0], topic_id=row[1], question_text=row[2], answer_text=row[3],
-                     question_image_path=row[4], answer_image_path=row[5])
+                     question_image_path=row[4], answer_image_path=row[5], card_type=row[6])
 
     # --- Review state -------------------------------------------------
 

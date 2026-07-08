@@ -14,13 +14,14 @@
 
 <table class="card-table">
   <thead>
-    <tr><th>Thema</th><th>Frage</th><th>Status</th><th></th></tr>
+    <tr><th>Thema</th><th>Frage</th><th>Typ</th><th>Status</th><th></th></tr>
   </thead>
   <tbody>
     {% for card in cards %}
     <tr>
       <td>{{ card.topic_name }}</td>
       <td>{{ card.preview }}</td>
+      <td>{{ card.type_label }}</td>
       <td>{{ card.status }}</td>
       <td class="row-actions">
         <a href="{{ url_for('cards.edit_card_form', card_id=card.id) }}">Bearbeiten</a>
@@ -34,7 +35,7 @@
       </td>
     </tr>
     {% else %}
-    <tr><td colspan="4" class="empty">Noch keine Karten vorhanden.</td></tr>
+    <tr><td colspan="5" class="empty">Noch keine Karten vorhanden.</td></tr>
     {% endfor %}
   </tbody>
 </table>

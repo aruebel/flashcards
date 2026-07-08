@@ -1,5 +1,6 @@
 from app import get_db
 from app.core import srs
+from app.core.models import Card, ChoiceOption
 from tests.conftest import add_card
 
 
@@ -93,3 +94,46 @@ def test_no_cards_available_shows_error_and_redirects_to_setup(client, topic_id)
     r = client.post("/quiz/setup", data={"review_mastered": "0", "only_due": "on", "count": "all"},
                      follow_redirects=True)
     assert b"keine faelligen Karten" in r.data
+
+
+def _add_multiple_choice_card(app, topic_id):
+    with app.app_context():
+        db = get_db()
+        return db.add_card(Card(
+            id=None, topic_id=topic_id, question_text="Hauptstadt von Frankreich?", answer_text="",
+            card_type="multiple_choice",
+            choices=[
+                ChoiceOption(id=None, card_id=0, text="Paris", is_correct=True, position=0),
+                ChoiceOption(id=None, card_id=0, text="Berlin", is_correct=False, position=1),
+            ],
+        ))
+
+
+def test_multiple_choice_card_shows_clickable_options(app, client, topic_id):
+    _add_multiple_choice_card(app, topic_id)
+    r = client.post("/quiz/setup", data={"review_mastered": "0", "only_due": "on", "count": "all"},
+                     follow_redirects=True)
+    assert b"Paris" in r.data
+    assert b"Berlin" in r.data
+    assert b'name="choice_id"' in r.data
+
+
+def test_answering_multiple_choice_reveals_answer_and_keeps_question(app, client, topic_id):
+    card = _add_multiple_choice_card(app, topic_id)
+    client.post("/quiz/setup", data={"review_mastered": "0", "only_due": "on", "count": "all"})
+
+    wrong_choice = next(c for c in card.choices if not c.is_correct)
+    r = client.post("/quiz/answer", data={"choice_id": wrong_choice.id}, follow_redirects=True)
+
+    assert b"Hauptstadt von Frankreich?" in r.data  # Frage bleibt sichtbar
+    assert b"Antwort" in r.data
+    assert b"deine Wahl" in r.data  # falsch gewaehlte Option markiert
+    assert b'name="rating"' in r.data  # Bewertung weiterhin moeglich
+
+
+def test_revealed_text_card_still_shows_question(app, client, topic_id):
+    add_card(app, topic_id, question="Was ist Python?", answer="Eine Sprache")
+    client.post("/quiz/setup", data={"review_mastered": "0", "only_due": "on", "count": "all"})
+    r = client.post("/quiz/reveal", follow_redirects=True)
+    assert b"Was ist Python?" in r.data
+    assert b"Eine Sprache" in r.data

@@ -1,13 +1,22 @@
 """Datenmodelle fuer Themen, Karteikarten und Lernstatus."""
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
-from typing import Optional
+from typing import List, Optional
 
 
 @dataclass
 class Topic:
     id: Optional[int]
     name: str
+
+
+@dataclass
+class ChoiceOption:
+    id: Optional[int]
+    card_id: int
+    text: str
+    is_correct: bool
+    position: int = 0
 
 
 @dataclass
@@ -18,6 +27,8 @@ class Card:
     answer_text: str
     question_image_path: Optional[str] = None
     answer_image_path: Optional[str] = None
+    card_type: str = "text"
+    choices: List[ChoiceOption] = field(default_factory=list)
 
 
 @dataclass

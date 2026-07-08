@@ -26,9 +26,10 @@ from typing import Optional
 
 from . import images as image_store
 from .database import Database
-from .models import Card, ReviewState
+from .models import Card, ChoiceOption, ReviewState
 
-FORMAT_VERSION = 1
+FORMAT_VERSION = 2
+SUPPORTED_FORMAT_VERSIONS = (1, 2)
 DATA_ENTRY = "data.json"
 IMAGES_PREFIX = "images/"
 
@@ -55,6 +56,8 @@ def export_to_zip(db: Database, zip_path: Path) -> None:
             "answer_text": card.answer_text,
             "question_image": _register_image(card.question_image_path, images_to_write),
             "answer_image": _register_image(card.answer_image_path, images_to_write),
+            "card_type": card.card_type,
+            "choices": [{"text": c.text, "is_correct": c.is_correct} for c in db.choices_for_card(card.id)],
             "review_state": {
                 "box": state.box,
                 "mastery_streak": state.mastery_streak,
@@ -91,7 +94,7 @@ def import_from_zip(db: Database, base_dir: Path, zip_path: Path, mode: str = "m
 
     with zipfile.ZipFile(zip_path, "r") as zf:
         data = json.loads(zf.read(DATA_ENTRY).decode("utf-8"))
-        if data.get("version") != FORMAT_VERSION:
+        if data.get("version") not in SUPPORTED_FORMAT_VERSIONS:
             raise ValueError(f"Nicht unterstuetzte Backup-Version: {data.get('version')!r}")
 
         if mode == "replace":
@@ -132,12 +135,18 @@ def import_from_zip(db: Database, base_dir: Path, zip_path: Path, mode: str = "m
 
 
 def _import_card(db: Database, base_dir: Path, zf: zipfile.ZipFile, topic_id: int, card_data: dict) -> None:
+    choices = [
+        ChoiceOption(id=None, card_id=0, text=c["text"], is_correct=c["is_correct"], position=i)
+        for i, c in enumerate(card_data.get("choices", []))
+    ]
     new_card = db.add_card(Card(
         id=None, topic_id=topic_id,
         question_text=card_data["question_text"],
         answer_text=card_data["answer_text"],
         question_image_path=_extract_image(zf, card_data.get("question_image"), base_dir),
         answer_image_path=_extract_image(zf, card_data.get("answer_image"), base_dir),
+        card_type=card_data.get("card_type", "text"),
+        choices=choices,
     ))
     rs = card_data["review_state"]
     db.save_review_state(ReviewState(

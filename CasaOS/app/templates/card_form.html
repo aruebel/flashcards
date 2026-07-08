@@ -16,10 +16,18 @@
     </select>
   </div>
 
-  {% for side, label, text_value, image_path in [
-       ("question", "Frage", card.question_text if card else "", card.question_image_path if card else None),
-       ("answer", "Antwort", card.answer_text if card else "", card.answer_image_path if card else None)
-  ] %}
+  <div class="field-row">
+    <label for="card_type">Kartentyp:</label>
+    <select name="card_type" id="card_type" onchange="onCardTypeChange()">
+      <option value="text" {% if not card or card.card_type == "text" %}selected{% endif %}>Text</option>
+      <option value="multiple_choice" {% if card and card.card_type == "multiple_choice" %}selected{% endif %}>Multiple Choice</option>
+    </select>
+  </div>
+
+  {% set side = "question" %}
+  {% set label = "Frage" %}
+  {% set text_value = card.question_text if card else "" %}
+  {% set image_path = card.question_image_path if card else None %}
   <fieldset class="card-side">
     <legend>{{ label }}</legend>
     <textarea id="{{ side }}_text" name="{{ side }}_text" rows="5">{{ text_value }}</textarea>
@@ -38,7 +46,46 @@
       <span class="hint">Oder: Feld anklicken und Bild mit Strg+V einfuegen (z.&nbsp;B. Screenshot).</span>
     </div>
   </fieldset>
-  {% endfor %}
+
+  {% set side = "answer" %}
+  {% set label = "Antwort" %}
+  {% set text_value = card.answer_text if card else "" %}
+  {% set image_path = card.answer_image_path if card else None %}
+  <fieldset class="card-side" id="answer_text_side">
+    <legend>{{ label }}</legend>
+    <textarea id="{{ side }}_text" name="{{ side }}_text" rows="5">{{ text_value }}</textarea>
+
+    <input type="hidden" id="{{ side }}_image_path" name="{{ side }}_image_path" value="{{ image_path or '' }}">
+    <img id="{{ side }}_preview" class="image-preview {% if not image_path %}hidden{% endif %}"
+         src="{{ image_path | media_url or '' }}" alt="{{ label }}-Bild">
+    <p id="{{ side }}_placeholder" class="image-placeholder {% if image_path %}hidden{% endif %}">Kein Bild</p>
+
+    <div class="side-buttons">
+      <label class="button-like">
+        Bild hochladen...
+        <input type="file" id="{{ side }}_image_file" accept="image/*" class="hidden-file-input">
+      </label>
+      <button type="button" onclick="removeSideImage('{{ side }}')">Bild entfernen</button>
+      <span class="hint">Oder: Feld anklicken und Bild mit Strg+V einfuegen (z.&nbsp;B. Screenshot).</span>
+    </div>
+  </fieldset>
+
+  <fieldset class="card-side" id="choices_side">
+    <legend>Antwortmoeglichkeiten</legend>
+    <p class="hint">Haekchen markiert die richtige(n) Antwort(en). Mindestens 2 Optionen, mindestens 1 richtige.</p>
+    <div id="choice-list">
+      {% if card %}
+        {% for choice in card.choices %}
+        <div class="choice-row" data-uid="{{ choice.id }}">
+          <input type="checkbox" name="choice_correct_{{ choice.id }}" value="1" {% if choice.is_correct %}checked{% endif %}>
+          <input type="text" name="choice_text_{{ choice.id }}" value="{{ choice.text }}" placeholder="Antwortoption">
+          <button type="button" class="link-button danger" onclick="removeChoiceRow(this)">Entfernen</button>
+        </div>
+        {% endfor %}
+      {% endif %}
+    </div>
+    <button type="button" onclick="addChoiceRow()">Option hinzufuegen</button>
+  </fieldset>
 
   <div class="form-actions">
     <button type="submit">Speichern</button>
@@ -56,6 +103,13 @@
 <script>
   initImageSide("question");
   initImageSide("answer");
+  onCardTypeChange();
+  {% if not card %}
+  if (document.querySelectorAll("#choice-list .choice-row").length === 0) {
+    addChoiceRow();
+    addChoiceRow();
+  }
+  {% endif %}
   {% if just_saved %}
   document.getElementById("question_text").focus();
   {% endif %}

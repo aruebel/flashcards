@@ -106,6 +106,34 @@ document.addEventListener("paste", (event) => {
   }
 });
 
+// --- Karteneditor: Kartentyp (Text / Multiple Choice) ----------------------
+
+let choiceRowCounter = 0;
+
+function onCardTypeChange() {
+  const isMultipleChoice = document.getElementById("card_type").value === "multiple_choice";
+  document.getElementById("answer_text_side").classList.toggle("hidden", isMultipleChoice);
+  document.getElementById("choices_side").classList.toggle("hidden", !isMultipleChoice);
+}
+
+function addChoiceRow() {
+  const uid = `n${choiceRowCounter++}`;
+  const row = document.createElement("div");
+  row.className = "choice-row";
+  row.dataset.uid = uid;
+  row.innerHTML = `
+    <input type="checkbox" name="choice_correct_${uid}" value="1">
+    <input type="text" name="choice_text_${uid}" placeholder="Antwortoption">
+    <button type="button" class="link-button danger" onclick="removeChoiceRow(this)">Entfernen</button>
+  `;
+  document.getElementById("choice-list").appendChild(row);
+  row.querySelector('input[type="text"]').focus();
+}
+
+function removeChoiceRow(button) {
+  button.closest(".choice-row").remove();
+}
+
 // --- Abfrage: Klick auf Bild in voller Groesse anzeigen -------------------
 
 document.addEventListener("DOMContentLoaded", () => {

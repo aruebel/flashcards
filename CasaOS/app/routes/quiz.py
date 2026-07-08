@@ -62,6 +62,7 @@ def start():
         "card_ids": [c.id for c in cards],
         "index": 0,
         "revealed": False,
+        "selected_choice_id": None,
         "newly_mastered": 0,
         "dropped": 0,
     }
@@ -82,6 +83,7 @@ def quiz_session():
     card = db.get_card(quiz["card_ids"][quiz["index"]])
     return render_template(
         "quiz_session.html", card=card, revealed=quiz["revealed"],
+        selected_choice_id=quiz.get("selected_choice_id"),
         position=quiz["index"] + 1, total=total, ratings=srs.RATING_LABELS,
     )
 
@@ -92,6 +94,18 @@ def reveal():
     if not quiz:
         return redirect(url_for("quiz.setup"))
     quiz["revealed"] = True
+    session["quiz"] = quiz
+    return redirect(url_for("quiz.quiz_session"))
+
+
+@quiz_bp.post("/answer")
+def answer():
+    """Klick auf eine Multiple-Choice-Option: deckt die Antwort auf und merkt die Wahl."""
+    quiz = session.get("quiz")
+    if not quiz:
+        return redirect(url_for("quiz.setup"))
+    quiz["revealed"] = True
+    quiz["selected_choice_id"] = request.form.get("choice_id", type=int)
     session["quiz"] = quiz
     return redirect(url_for("quiz.quiz_session"))
 
@@ -117,6 +131,7 @@ def rate():
 
     quiz["index"] += 1
     quiz["revealed"] = False
+    quiz["selected_choice_id"] = None
     session["quiz"] = quiz
 
     if quiz["index"] >= len(quiz["card_ids"]):

@@ -95,3 +95,54 @@ def test_image_upload_rejects_non_image_extension(client):
         content_type="multipart/form-data",
     )
     assert r.status_code == 400
+
+
+def test_create_multiple_choice_card(app, client, topic_id):
+    r = client.post(
+        "/cards/new",
+        data={
+            "topic_id": topic_id, "card_type": "multiple_choice",
+            "question_text": "Hauptstadt von Frankreich?", "answer_text": "",
+            "question_image_path": "", "answer_image_path": "",
+            "choice_text_1": "Paris", "choice_correct_1": "1",
+            "choice_text_2": "Berlin",
+            "choice_text_3": "Madrid",
+        },
+        follow_redirects=True,
+    )
+    assert b"gespeichert" in r.data
+    with app.app_context():
+        db = get_db()
+        card = db.get_card(db.list_cards(topic_ids=[topic_id])[0].id)
+        assert card.card_type == "multiple_choice"
+        assert len(card.choices) == 3
+        assert sum(c.is_correct for c in card.choices) == 1
+        assert next(c for c in card.choices if c.is_correct).text == "Paris"
+
+
+def test_create_multiple_choice_card_requires_two_options(client, topic_id):
+    r = client.post(
+        "/cards/new",
+        data={
+            "topic_id": topic_id, "card_type": "multiple_choice",
+            "question_text": "Frage?", "answer_text": "",
+            "question_image_path": "", "answer_image_path": "",
+            "choice_text_1": "Einzige Option", "choice_correct_1": "1",
+        },
+        follow_redirects=True,
+    )
+    assert "mindestens 2 Antwortmoeglichkeiten".encode() in r.data
+
+
+def test_create_multiple_choice_card_requires_correct_option(client, topic_id):
+    r = client.post(
+        "/cards/new",
+        data={
+            "topic_id": topic_id, "card_type": "multiple_choice",
+            "question_text": "Frage?", "answer_text": "",
+            "question_image_path": "", "answer_image_path": "",
+            "choice_text_1": "A", "choice_text_2": "B",
+        },
+        follow_redirects=True,
+    )
+    assert "mindestens eine richtige Antwort".encode() in r.data
