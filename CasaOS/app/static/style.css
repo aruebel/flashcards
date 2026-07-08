@@ -268,20 +268,29 @@ legend { font-weight: 600; padding: 0 6px; }
   list-style: none;
 }
 
-.choice-button {
-  text-align: left;
+.choice-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   background: var(--color-surface);
   color: var(--color-text);
   border: 1px solid var(--color-border);
   padding: 12px 16px;
   font-size: 1rem;
   border-radius: var(--radius);
+  cursor: pointer;
 }
 
-.choice-button:hover {
-  background: var(--color-bg);
-  border-color: var(--color-accent);
+.choice-option:hover { border-color: var(--color-accent); }
+
+.choice-option input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  cursor: pointer;
 }
+
+.choice-submit-button { margin-top: 12px; }
 
 .choice-result {
   padding: 10px 14px;

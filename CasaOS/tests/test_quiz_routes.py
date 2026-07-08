@@ -109,13 +109,25 @@ def _add_multiple_choice_card(app, topic_id):
         ))
 
 
-def test_multiple_choice_card_shows_clickable_options(app, client, topic_id):
+def test_multiple_choice_card_shows_checkable_options(app, client, topic_id):
     _add_multiple_choice_card(app, topic_id)
     r = client.post("/quiz/setup", data={"review_mastered": "0", "only_due": "on", "count": "all"},
                      follow_redirects=True)
     assert b"Paris" in r.data
     assert b"Berlin" in r.data
-    assert b'name="choice_id"' in r.data
+    assert b'name="choice_ids"' in r.data
+    assert b"Antwort pruefen" in r.data
+
+
+def test_selecting_wrong_option_does_not_reveal_immediately(app, client, topic_id):
+    """Regression: bei mehreren richtigen Antworten darf die erste Auswahl allein
+    noch nicht auswerten - erst der Submit-Button deckt die Antwort auf."""
+    card = _add_multiple_choice_card(app, topic_id)
+    client.post("/quiz/setup", data={"review_mastered": "0", "only_due": "on", "count": "all"})
+
+    r = client.get("/quiz/session")
+    assert b'name="rating"' not in r.data  # noch keine Bewertung, da nichts abgesendet wurde
+    assert b"deine Wahl" not in r.data
 
 
 def test_answering_multiple_choice_reveals_answer_and_keeps_question(app, client, topic_id):
@@ -123,12 +135,55 @@ def test_answering_multiple_choice_reveals_answer_and_keeps_question(app, client
     client.post("/quiz/setup", data={"review_mastered": "0", "only_due": "on", "count": "all"})
 
     wrong_choice = next(c for c in card.choices if not c.is_correct)
-    r = client.post("/quiz/answer", data={"choice_id": wrong_choice.id}, follow_redirects=True)
+    r = client.post("/quiz/answer", data={"choice_ids": [wrong_choice.id]}, follow_redirects=True)
 
     assert b"Hauptstadt von Frankreich?" in r.data  # Frage bleibt sichtbar
     assert b"Antwort" in r.data
     assert b"deine Wahl" in r.data  # falsch gewaehlte Option markiert
     assert b'name="rating"' in r.data  # Bewertung weiterhin moeglich
+
+
+def _add_multi_correct_card(app, topic_id):
+    with app.app_context():
+        db = get_db()
+        return db.add_card(Card(
+            id=None, topic_id=topic_id, question_text="Welche sind Primzahlen?", answer_text="",
+            card_type="multiple_choice",
+            choices=[
+                ChoiceOption(id=None, card_id=0, text="2", is_correct=True, position=0),
+                ChoiceOption(id=None, card_id=0, text="3", is_correct=True, position=1),
+                ChoiceOption(id=None, card_id=0, text="4", is_correct=False, position=2),
+            ],
+        ))
+
+
+def test_multiple_correct_answers_can_be_selected_together(app, client, topic_id):
+    card = _add_multi_correct_card(app, topic_id)
+    client.post("/quiz/setup", data={"review_mastered": "0", "only_due": "on", "count": "all"})
+
+    correct_ids = [c.id for c in card.choices if c.is_correct]
+    r = client.post("/quiz/answer", data={"choice_ids": correct_ids}, follow_redirects=True)
+    body = r.data.decode("utf-8")
+
+    assert body.count("nicht gewaehlt") == 0  # beide richtigen wurden ausgewaehlt, keine verpasst
+    assert body.count("deine Wahl") == 2  # beide richtigen als "deine Wahl" markiert
+    assert "✗" not in body  # kein Kreuz, da keine falsche Antwort ausgewaehlt wurde
+
+
+def test_choice_order_stays_stable_between_question_and_result(app, client, topic_id):
+    card = _add_multiple_choice_card(app, topic_id)
+    client.post("/quiz/setup", data={"review_mastered": "0", "only_due": "on", "count": "all"})
+
+    r1 = client.get("/quiz/session")
+    order1 = [name for name in ("Paris", "Berlin") if r1.data.find(name.encode()) >= 0]
+    positions1 = sorted(order1, key=lambda n: r1.data.find(n.encode()))
+
+    correct_id = next(c.id for c in card.choices if c.is_correct)
+    client.post("/quiz/answer", data={"choice_ids": [correct_id]})
+    r2 = client.get("/quiz/session")
+    positions2 = sorted(("Paris", "Berlin"), key=lambda n: r2.data.find(n.encode()))
+
+    assert positions1 == positions2  # Reihenfolge bleibt zwischen Frage- und Ergebnisansicht gleich
 
 
 def test_revealed_text_card_still_shows_question(app, client, topic_id):

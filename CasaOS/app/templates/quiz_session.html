@@ -18,10 +18,17 @@
   {% endif %}
 
   {% if card.card_type == "multiple_choice" and not revealed %}
-    <form method="post" action="{{ url_for('quiz.answer') }}" class="choice-list">
-      {% for choice in card.choices %}
-        <button type="submit" name="choice_id" value="{{ choice.id }}" class="choice-button">{{ choice.text }}</button>
-      {% endfor %}
+    <p class="hint">Waehle eine oder mehrere Antworten und klicke dann auf "Antwort pruefen".</p>
+    <form method="post" action="{{ url_for('quiz.answer') }}">
+      <div class="choice-list">
+        {% for choice in card.choices %}
+          <label class="choice-option">
+            <input type="checkbox" name="choice_ids" value="{{ choice.id }}">
+            <span>{{ choice.text }}</span>
+          </label>
+        {% endfor %}
+      </div>
+      <button type="submit" class="choice-submit-button">Antwort pruefen</button>
     </form>
   {% elif not revealed %}
     <form method="post" action="{{ url_for('quiz.reveal') }}">
@@ -34,12 +41,14 @@
     {% if card.card_type == "multiple_choice" %}
       <ul class="choice-list result">
         {% for choice in card.choices %}
+          {% set was_selected = choice.id in selected_choice_ids %}
           <li class="choice-result
               {% if choice.is_correct %}correct{% endif %}
-              {% if choice.id == selected_choice_id and not choice.is_correct %}selected-wrong{% endif %}">
+              {% if was_selected and not choice.is_correct %}selected-wrong{% endif %}">
             {{ choice.text }}
-            {% if choice.is_correct %}✓{% endif %}
-            {% if choice.id == selected_choice_id and not choice.is_correct %}✗ (deine Wahl){% endif %}
+            {% if choice.is_correct and was_selected %} ✓ (deine Wahl){% endif %}
+            {% if choice.is_correct and not was_selected %} ✓ (nicht gewaehlt){% endif %}
+            {% if not choice.is_correct and was_selected %} ✗ (deine Wahl){% endif %}
           </li>
         {% endfor %}
       </ul>

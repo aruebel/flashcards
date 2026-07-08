@@ -62,7 +62,8 @@ def start():
         "card_ids": [c.id for c in cards],
         "index": 0,
         "revealed": False,
-        "selected_choice_id": None,
+        "selected_choice_ids": [],
+        "choice_order": None,
         "newly_mastered": 0,
         "dropped": 0,
     }
@@ -81,9 +82,22 @@ def quiz_session():
         return redirect(url_for("quiz.finish"))
 
     card = db.get_card(quiz["card_ids"][quiz["index"]])
+
+    if card.card_type == "multiple_choice":
+        # Reihenfolge wird einmal pro Karte gewuerfelt und in der Session
+        # gehalten, damit sie zwischen Frage- und Ergebnisansicht stabil bleibt.
+        order = quiz.get("choice_order")
+        if not order:
+            order = [c.id for c in card.choices]
+            random.shuffle(order)
+            quiz["choice_order"] = order
+            session["quiz"] = quiz
+        order_index = {choice_id: position for position, choice_id in enumerate(order)}
+        card.choices.sort(key=lambda c: order_index.get(c.id, 0))
+
     return render_template(
         "quiz_session.html", card=card, revealed=quiz["revealed"],
-        selected_choice_id=quiz.get("selected_choice_id"),
+        selected_choice_ids=quiz.get("selected_choice_ids", []),
         position=quiz["index"] + 1, total=total, ratings=srs.RATING_LABELS,
     )
 
@@ -100,12 +114,12 @@ def reveal():
 
 @quiz_bp.post("/answer")
 def answer():
-    """Klick auf eine Multiple-Choice-Option: deckt die Antwort auf und merkt die Wahl."""
+    """Absenden der markierten Multiple-Choice-Optionen: deckt erst jetzt die Antwort auf."""
     quiz = session.get("quiz")
     if not quiz:
         return redirect(url_for("quiz.setup"))
     quiz["revealed"] = True
-    quiz["selected_choice_id"] = request.form.get("choice_id", type=int)
+    quiz["selected_choice_ids"] = request.form.getlist("choice_ids", type=int)
     session["quiz"] = quiz
     return redirect(url_for("quiz.quiz_session"))
 
@@ -131,7 +145,8 @@ def rate():
 
     quiz["index"] += 1
     quiz["revealed"] = False
-    quiz["selected_choice_id"] = None
+    quiz["selected_choice_ids"] = []
+    quiz["choice_order"] = None
     session["quiz"] = quiz
 
     if quiz["index"] >= len(quiz["card_ids"]):
