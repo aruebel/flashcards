@@ -151,6 +151,7 @@ button.danger:hover { background: #b91c1c; }
 }
 
 .row-actions { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.bulk-actions { margin-bottom: 12px; }
 .inline-form { display: inline; }
 .inline-form-row { display: flex; gap: 8px; margin-bottom: 12px; }
 
@@ -364,6 +365,20 @@ legend { font-weight: 600; padding: 0 6px; }
 
 [data-theme="dark"] .puzzle-quiz-table.result tr.correct { background: #14532d; color: #86efac; }
 [data-theme="dark"] .puzzle-quiz-table.result tr.incorrect { background: #7f1d1d; color: #fca5a5; }
+
+.progress-bar {
+  background: var(--color-border);
+  border-radius: var(--radius);
+  height: 10px;
+  width: 160px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  background: var(--color-accent);
+  height: 100%;
+  border-radius: var(--radius);
+}
 
 code {
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;

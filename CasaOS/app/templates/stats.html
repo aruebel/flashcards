@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Statistik{% endblock %}
+{% block content %}
+
+<h1>Statistik</h1>
+<p class="hint">Anteil der Karten je Thema, die aktuell als "gelernt" gelten.</p>
+
+<table class="card-table">
+  <thead>
+    <tr><th>Thema</th><th>Gelernt</th><th>Fortschritt</th></tr>
+  </thead>
+  <tbody>
+    {% for row in topic_stats %}
+    <tr>
+      <td>{{ row.topic_name }}</td>
+      <td>{{ row.mastered }} / {{ row.total }} ({{ row.percent }}%)</td>
+      <td>
+        <div class="progress-bar">
+          <div class="progress-bar-fill" style="width: {{ row.percent }}%;"></div>
+        </div>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="3" class="empty">Noch keine Themen vorhanden.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% endblock %}

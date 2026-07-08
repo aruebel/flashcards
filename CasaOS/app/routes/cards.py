@@ -212,6 +212,29 @@ def delete_card(card_id):
     return redirect(url_for("cards.index"))
 
 
+@cards_bp.post("/cards/bulk-delete")
+def bulk_delete_cards():
+    db = get_db()
+    card_ids = request.form.getlist("card_ids", type=int)
+    topic_filter = request.form.get("topic_id", type=int)
+
+    deleted = 0
+    for card_id in card_ids:
+        card = db.get_card(card_id)
+        if card is None:
+            continue
+        image_store.delete_image(card.question_image_path)
+        image_store.delete_image(card.answer_image_path)
+        db.delete_card(card_id)
+        deleted += 1
+
+    if deleted:
+        flash(f"{deleted} Karte(n) geloescht.", "success")
+    else:
+        flash("Keine Karten ausgewaehlt.", "error")
+    return redirect(url_for("cards.index", topic_id=topic_filter))
+
+
 @cards_bp.post("/cards/<int:card_id>/reset")
 def reset_card(card_id):
     db = get_db()

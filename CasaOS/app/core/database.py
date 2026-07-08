@@ -240,6 +240,25 @@ class Database:
     def mastered_cards(self, topic_ids: Optional[List[int]] = None) -> List[Card]:
         return [card for card in self.list_cards(topic_ids) if self.get_review_state(card.id).mastered]
 
+    def topic_stats(self) -> List[dict]:
+        """Anzahl Karten und gelernte Karten je Thema, fuer die Statistik-Seite."""
+        rows = self._conn.execute(
+            "SELECT t.id, t.name, COUNT(c.id) AS total, COALESCE(SUM(rs.mastered), 0) AS mastered "
+            "FROM topics t "
+            "LEFT JOIN cards c ON c.topic_id = t.id "
+            "LEFT JOIN review_state rs ON rs.card_id = c.id "
+            "GROUP BY t.id, t.name "
+            "ORDER BY t.name"
+        ).fetchall()
+        stats = []
+        for topic_id, name, total, mastered in rows:
+            percent = round(mastered / total * 100) if total else 0
+            stats.append({
+                "topic_id": topic_id, "topic_name": name,
+                "total": total, "mastered": mastered, "percent": percent,
+            })
+        return stats
+
     @staticmethod
     def _row_to_state(row) -> ReviewState:
         return ReviewState(card_id=row[0], box=row[1], mastery_streak=row[2], mastered=bool(row[3]),

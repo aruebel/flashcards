@@ -12,13 +12,30 @@
   </select>
 </form>
 
+{# Eigenstaendiges Formular fuer die Sammel-Loeschung; die Zeilen-Checkboxen
+   liegen in der Tabelle und werden per form="bulk-delete-form"-Attribut
+   zugeordnet, statt die Tabelle (und die einzelnen Zeilen-Aktionsformulare)
+   in dieses Formular zu verschachteln (verschachtelte <form>s sind ungueltiges HTML). #}
+<form id="bulk-delete-form" method="post" action="{{ url_for('cards.bulk_delete_cards') }}"
+      onsubmit="return confirmBulkDeleteCards();">
+  <input type="hidden" name="topic_id" value="{{ topic_filter or '' }}">
+</form>
+
+<div class="row-actions bulk-actions">
+  <button type="submit" form="bulk-delete-form" class="danger">Ausgewaehlte loeschen</button>
+</div>
+
 <table class="card-table">
   <thead>
-    <tr><th>Thema</th><th>Frage</th><th>Typ</th><th>Status</th><th></th></tr>
+    <tr>
+      <th><input type="checkbox" id="select-all-cards" onclick="toggleAllCardCheckboxes(this)"></th>
+      <th>Thema</th><th>Frage</th><th>Typ</th><th>Status</th><th></th>
+    </tr>
   </thead>
   <tbody>
     {% for card in cards %}
     <tr>
+      <td><input type="checkbox" name="card_ids" value="{{ card.id }}" form="bulk-delete-form" class="row-select-checkbox"></td>
       <td>{{ card.topic_name }}</td>
       <td>{{ card.preview }}</td>
       <td>{{ card.type_label }}</td>
@@ -35,7 +52,7 @@
       </td>
     </tr>
     {% else %}
-    <tr><td colspan="5" class="empty">Noch keine Karten vorhanden.</td></tr>
+    <tr><td colspan="6" class="empty">Noch keine Karten vorhanden.</td></tr>
     {% endfor %}
   </tbody>
 </table>

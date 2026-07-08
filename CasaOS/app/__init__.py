@@ -29,11 +29,13 @@ def create_app(data_dir: Optional[Path] = None) -> Flask:
     from .routes.cards import cards_bp
     from .routes.quiz import quiz_bp
     from .routes.backup_routes import backup_bp
+    from .routes.stats import stats_bp
 
     app.register_blueprint(topics_bp)
     app.register_blueprint(cards_bp)
     app.register_blueprint(quiz_bp)
     app.register_blueprint(backup_bp)
+    app.register_blueprint(stats_bp)
 
     @app.get("/media/<path:filename>")
     def media(filename):

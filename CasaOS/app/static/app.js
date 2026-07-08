@@ -167,6 +167,23 @@ function removePuzzleRow(button) {
   button.closest(".puzzle-pair-row").remove();
 }
 
+// --- Kartenliste: Sammel-Loeschung ueber Checkboxen -----------------------
+
+function toggleAllCardCheckboxes(source) {
+  document.querySelectorAll(".row-select-checkbox").forEach((checkbox) => {
+    checkbox.checked = source.checked;
+  });
+}
+
+function confirmBulkDeleteCards() {
+  const checked = document.querySelectorAll(".row-select-checkbox:checked");
+  if (checked.length === 0) {
+    alert("Bitte mindestens eine Karte auswaehlen.");
+    return false;
+  }
+  return confirm(`${checked.length} Karte(n) wirklich loeschen?`);
+}
+
 // --- Abfrage: Klick auf Bild in voller Groesse anzeigen -------------------
 
 document.addEventListener("DOMContentLoaded", () => {
